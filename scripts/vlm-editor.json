@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "1) **Proportion & Professionalism:** Yes. The preview mimics an A4 sheet with a clean double-border frame, serif typography, and a formal hierarchy (Logo -> Name -> Heading -> Date/Theme -> Items). It looks exactly like a printable church bulletin.\n2) **Overlap/Clipping:** None observed. The layout is spacious; text fits comfortably within the borders.\n3) **Style:** Excellent. It uses a minimalist palette (whites, soft grays, deep green accents). Zero gradients, neon, or glows. The aesthetic is dignified and appropriate for a religious setting.\n4) **Score:** 9.5/10. (Highly polished UI/UX with a realistic \"Print Preview\" feel).",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790993547,
+  "id": "20261003101225d5f824602aa54809",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "20261003101225d5f824602aa54809",
+  "usage": {
+    "completion_tokens": 152,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 1794,
+    "prompt_tokens_details": {
+      "cached_tokens": 2
+    },
+    "total_tokens": 1946
+  }
+}

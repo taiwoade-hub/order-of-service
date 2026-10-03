@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "**Review:**\n\n1.  **Readability & Spacing:** Excellent. The typography is clear, and the vertical stacking of the \"Service details\" card and \"Order of service\" section provides good visual hierarchy. Padding within the input fields is sufficient for touch targets.\n2.  **Overflow/Clipping:** None detected. The text wraps correctly (e.g., the subtitle), and the layout respects the 390px width constraints without horizontal scrolling.\n3.  **Bottom Navigation:** Renders perfectly. The 5 icons (Home, Templates, New, History, Settings) are evenly spaced with clear labels. The fixed position is appropriate for this type of editor interface.\n4.  **Score: 9/10.** A polished, professional mobile UI that effectively balances data entry with document previewing.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790993557,
+  "id": "2026100310123445bb8ade6675425c",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "2026100310123445bb8ade6675425c",
+  "usage": {
+    "completion_tokens": 166,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 487,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 653
+  }
+}
