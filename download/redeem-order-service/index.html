@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Redeem Church - Order of Service Planner. Create templates, plan Sunday services, assign people and generate beautiful A4 PDF programs. Works offline, data stays on your device.">
-<title>Redeem Church — Order of Service Planner</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231E3A8A'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='34' font-weight='bold' fill='white' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E">
+<meta name="description" content="Order of Service Planner - Plan weekly Sunday worship services, assign ministers, customize liturgy blueprints, and generate print-ready A4 PDF programs.">
+<title>Order of Service — Plan • Create • Worship</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -635,12 +638,12 @@ tailwind.config = {
 
 <!-- ==================== Loading screen ==================== -->
 <div id="loading-screen" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center gap-5 transition-opacity duration-300">
-  <div class="w-14 h-14 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md">
-    <i data-lucide="church" class="w-7 h-7"></i>
+  <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-sm">
+    <img src="/logo-icon.png" alt="Order of Service" class="w-full h-full object-contain">
   </div>
   <div class="text-center">
-    <p class="text-lg font-bold tracking-tight text-slate-900">Redeem Church</p>
-    <p class="text-xs text-slate-500 font-medium tracking-wide uppercase mt-0.5">Order of Service Planner</p>
+    <p class="text-lg font-bold tracking-tight text-slate-900">Order of Service</p>
+    <p class="text-xs text-slate-500 font-medium tracking-wide uppercase mt-0.5">Plan • Create • Worship</p>
   </div>
   <div class="w-6 h-6 rounded-full border-2 border-slate-200 border-t-blue-900 spin"></div>
 </div>
@@ -651,19 +654,23 @@ tailwind.config = {
   <!-- Sidebar (desktop) -->
   <aside class="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-white border-r border-slate-200">
     <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0">
-      <div id="brand-badge" class="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-serif text-base font-bold shrink-0 shadow-sm">R</div>
+      <div id="brand-badge" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
+        <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+      </div>
       <div class="min-w-0">
-        <p id="brand-name" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Redeem Church</p>
-        <p class="text-[11px] text-slate-500">Order of Service</p>
+        <p id="brand-name" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
+        <p class="text-[11px] text-slate-500">Plan • Create • Worship</p>
       </div>
     </div>
     <nav id="side-nav" class="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Main navigation"></nav>
     <div class="p-3 border-t border-slate-200 shrink-0">
       <button data-action="nav" data-page="account" class="w-full flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-slate-50 transition-colors text-left group">
-        <div id="brand-avatar" class="w-8 h-8 rounded-full bg-blue-100 text-blue-900 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">RC</div>
+        <div id="brand-avatar" class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
+          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+        </div>
         <div class="min-w-0">
-          <p id="brand-profile-name" class="text-[13px] font-semibold text-slate-800 truncate group-hover:text-blue-900">Redeem Church</p>
-          <p class="text-[11px] text-slate-500 truncate">Local workspace</p>
+          <p id="brand-profile-name" class="text-[13px] font-semibold text-slate-800 truncate group-hover:text-blue-900">Order of Service</p>
+          <p class="text-[11px] text-slate-500 truncate">Workspace &amp; Backup</p>
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-slate-600 ml-auto shrink-0"></i>
       </button>
@@ -675,10 +682,12 @@ tailwind.config = {
   <aside id="drawer" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85%] bg-white border-r border-slate-200 shadow-xl flex flex-col -translate-x-full transition-transform duration-200 lg:hidden">
     <div class="flex items-center justify-between px-5 h-16 border-b border-slate-200 shrink-0">
       <div class="flex items-center gap-3 min-w-0">
-        <div id="brand-badge-m" class="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-serif text-base font-bold shrink-0">R</div>
+        <div id="brand-badge-m" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
+          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+        </div>
         <div class="min-w-0">
-          <p id="brand-name-m" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Redeem Church</p>
-          <p class="text-[11px] text-slate-500">Order of Service</p>
+          <p id="brand-name-m" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
+          <p class="text-[11px] text-slate-500">Plan • Create • Worship</p>
         </div>
       </div>
       <button data-action="close-menu" class="icon-btn" aria-label="Close menu"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -691,8 +700,10 @@ tailwind.config = {
   <header class="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
     <div class="flex items-center justify-between h-14 px-4">
       <div class="flex items-center gap-2.5 min-w-0">
-        <div id="brand-badge-h" class="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center font-serif text-sm font-bold shrink-0 shadow-sm">R</div>
-        <p id="brand-name-h" class="text-sm font-bold tracking-wide truncate uppercase text-slate-900">Redeem Church</p>
+        <div id="brand-badge-h" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-0.5 shrink-0 shadow-sm overflow-hidden">
+          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+        </div>
+        <p id="brand-name-h" class="text-sm font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
       </div>
       <div class="flex items-center gap-1.5">
         <button class="btn btn-primary py-1 px-2.5 text-xs flex items-center gap-1 rounded-lg shadow-sm" data-action="nav" data-page="newService">
@@ -1113,12 +1124,12 @@ async function seedIfEmpty() {
   if (await db.church.count() === 0) {
     await db.church.add({
       id: 'main',
-      name: 'Redeem Church',
-      tagline: 'A community anchored in grace and truth',
+      name: 'Order of Service',
+      tagline: 'Plan • Create • Worship',
       address: '12 Grace Avenue, Lagos', phone: '+234 800 000 0000', 
-      email: 'hello@redeemchurch.org', website: 'www.redeemchurch.org',
+      email: 'hello@orderofservice.app', website: 'orderofservice.app',
       brandColor: '#1E3A8A',
-      logo: null,
+      logo: '/logo.png',
       activeThemeId: 'theme-classic',
       createdAt: new Date().toISOString(),
     });
@@ -1156,11 +1167,14 @@ function applyAccent() {
 
 function updateBranding() {
   const c = App.church || {};
-  const name = c.name || 'Redeem Church';
-  const initials = initialsOf(name);
+  const name = c.name || 'Order of Service';
+  const logo = c.logo || '/logo.png';
+  const logoIcon = '/logo-icon.png';
   ['brand-badge', 'brand-badge-m', 'brand-badge-h'].forEach(id => {
     const el = document.getElementById(id); 
-    if (el) el.textContent = initials;
+    if (el) {
+      el.innerHTML = '<img src="' + logoIcon + '" alt="Order of Service" class="w-full h-full object-contain">';
+    }
   });
   ['brand-name', 'brand-name-m', 'brand-name-h', 'brand-profile-name'].forEach(id => {
     const el = document.getElementById(id); 
@@ -1168,9 +1182,7 @@ function updateBranding() {
   });
   const avatar = document.getElementById('brand-avatar');
   if (avatar) {
-    avatar.innerHTML = c.logo
-      ? '<img src="' + c.logo + '" alt="' + esc(name) + ' logo" class="w-full h-full object-cover">'
-      : esc(initials);
+    avatar.innerHTML = '<img src="' + logoIcon + '" alt="' + esc(name) + ' logo" class="w-full h-full object-contain">';
   }
 }
 
@@ -2269,10 +2281,20 @@ async function generateServicePdf(service, church, theme) {
   if (church.logo) {
     try {
       const img = await loadImage(church.logo);
+      let dataUrl = church.logo;
+      if (typeof dataUrl === 'string' && !dataUrl.startsWith('data:')) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        dataUrl = c.toDataURL('image/png');
+      }
       logo = {
-        dataUrl: church.logo,
-        width: img.width, height: img.height,
-        format: String(church.logo).indexOf('image/png') === 5 || String(church.logo).indexOf('image/png') > -1 ? 'PNG' : 'JPEG',
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        format: 'PNG',
       };
     } catch (e) { logo = null; }
   }
@@ -2626,8 +2648,8 @@ async function renderDashboard() {
   <div class="card p-5 sm:p-6 mb-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
       <div class="flex items-center gap-4 min-w-0">
-        <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-serif text-2xl font-bold shrink-0 shadow-sm border border-blue-950/20">
-          ${App.church && App.church.logo ? `<img src="${App.church.logo}" alt="Logo" class="w-full h-full object-cover rounded-2xl">` : esc(churchInitials)}
+        <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm overflow-hidden">
+          ${App.church && App.church.logo ? `<img src="${App.church.logo}" alt="Logo" class="w-full h-full object-contain">` : `<img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">`}
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2.5 flex-wrap">
@@ -2944,8 +2966,8 @@ async function renderAccount() {
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
     <div class="card p-6">
       <div class="flex flex-col items-center text-center">
-        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-blue-100 text-blue-900 flex items-center justify-center font-serif text-2xl font-bold shrink-0 shadow-sm">
-          ${c.logo ? '<img src="' + c.logo + '" alt="' + esc(c.name) + ' logo" class="w-full h-full object-cover">' : esc(initialsOf(c.name))}
+        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm">
+          ${c.logo ? '<img src="' + c.logo + '" alt="' + esc(c.name) + ' logo" class="w-full h-full object-contain">' : '<img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">'}
         </div>
         <h2 class="text-lg font-bold mt-3 text-slate-900">${esc(c.name || 'Redeem Church')}</h2>
         <p class="text-xs text-slate-500 mt-0.5 break-all">${esc(c.email || 'hello@redeemchurch.org')}</p>
@@ -3487,6 +3509,16 @@ async function boot() {
     await db.open();
     await seedIfEmpty();
     App.church = await db.church.get('main');
+    if (App.church) {
+      let changed = false;
+      if (!App.church.logo) { App.church.logo = '/logo.png'; changed = true; }
+      if (App.church.name === 'Redeem Church') {
+        App.church.name = 'Order of Service';
+        App.church.tagline = 'Plan • Create • Worship';
+        changed = true;
+      }
+      if (changed) { try { await db.church.put(App.church); } catch (e) {} }
+    }
     await loadThemes();
     applyAccent();
     updateBranding();
