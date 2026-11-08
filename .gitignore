@@ -54,6 +54,8 @@ dev.log
 dev.out.log
 test
 prompt
+.gh-pages-deploy
+scripts/_extracted/
 
 server.log
 # Skills directory

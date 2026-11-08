@@ -4198,6 +4198,28 @@ function handleSearchInput(type, value) {
 }
 
 // ======================================
+// CRYPTO & SECURITY UTILITIES
+// ======================================
+
+async function hashPassword(plainText) {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode('salt:oos:liturgical:' + plainText);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {
+    // Fallback if subtle crypto is disabled in edge mode
+    let hash = 0;
+    for (let i = 0; i < plainText.length; i++) {
+      hash = ((hash << 5) - hash) + plainText.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'fb-' + Math.abs(hash).toString(16);
+  }
+}
+
+// ======================================
 // AUTHENTICATION HANDLERS (Real IndexedDB Users)
 // ======================================
 
@@ -4218,6 +4240,8 @@ async function handleLoginSubmit() {
     return;
   }
 
+  const passHash = await hashPassword(pass);
+
   // Lookup account in IndexedDB users table
   let existingUser = null;
   try {
@@ -4227,10 +4251,20 @@ async function handleLoginSubmit() {
   }
 
   if (existingUser) {
-    if (existingUser.password && existingUser.password !== pass) {
+    // Verify password hash or legacy plaintext match
+    const matches = existingUser.passwordHash
+      ? existingUser.passwordHash === passHash
+      : existingUser.password === pass;
+    if (!matches) {
       toast('Incorrect password. Please verify and try again.', 'error');
       if (passInput) { passInput.value = ''; passInput.focus(); }
       return;
+    }
+    // Upgrade legacy password to hash if needed
+    if (!existingUser.passwordHash) {
+      existingUser.passwordHash = passHash;
+      delete existingUser.password;
+      try { await db.users.put(existingUser); } catch (e) {}
     }
   } else {
     // If not found in IndexedDB, auto-register as legitimate workspace account
@@ -4239,7 +4273,7 @@ async function handleLoginSubmit() {
     existingUser = {
       id: uid(),
       email: email,
-      password: pass,
+      passwordHash: passHash,
       name: name,
       role: 'Lead Pastor',
       churchName: churchName,
@@ -4316,10 +4350,11 @@ async function handleSignupSubmit() {
     }
   } catch (e) {}
 
+  const passHash = await hashPassword(pass);
   const newUser = {
     id: uid(),
     email: email,
-    password: pass,
+    passwordHash: passHash,
     name: name,
     role: role,
     churchName: churchName,
