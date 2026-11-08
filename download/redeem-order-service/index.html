@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' blob: data:; frame-ancestors 'self';">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="description" content="Order of Service Planner - Plan weekly Sunday worship services, assign ministers, customize liturgy blueprints, and generate print-ready A4 PDF programs.">
 <title>Order of Service — Plan • Create • Worship</title>
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -44,6 +48,7 @@ body {
   overflow-x: hidden;
   min-height: 100vh;
 }
+img { max-width: 100%; }
 
 * { scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
 *::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -329,10 +334,12 @@ select.input {
   max-width: 620px; 
   margin: 0 auto; 
   background: #FFFFFF; 
-  aspect-ratio: 210 / 297;
-  padding: 56px 52px 70px; 
+  min-height: 877px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 56px 52px 50px; 
   position: relative; 
-  overflow: hidden; 
   color: #171717; 
   font-family: var(--bf);
   box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
@@ -344,6 +351,25 @@ select.input {
 .doc-frame-inner { inset: 16px; border: 1px solid var(--frame-color); }
 .doc-topbar { position: absolute; top: 0; left: 0; right: 0; height: 14px; background: var(--primary); }
 .doc-bottombar { position: absolute; bottom: 0; left: 0; right: 0; height: 7px; background: var(--primary); }
+
+.dashboard-logo-box {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  max-width: 56px !important;
+  max-height: 56px !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+.dashboard-logo-box img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+}
 
 .doc-head { text-align: center; }
 .doc-head.left { text-align: left; }
@@ -363,7 +389,7 @@ select.input {
 .doc-headrule { margin-top: 20px; border-top: 1px solid #E8E8E4; }
 .doc-headrule.short { width: 64px; margin-left: auto; margin-right: auto; }
 
-.doc-items { margin-top: 24px; display: flex; flex-direction: column; gap: var(--item-gap); }
+.doc-items { margin-top: 24px; display: flex; flex-direction: column; gap: var(--item-gap); flex: 1 0 auto; }
 .doc-item-title { font-family: var(--hf); font-size: 11.5px; font-weight: 600; letter-spacing: .16em; padding-left: .16em;
   text-transform: uppercase; color: var(--primary); }
 .doc-item-person { font-size: 14.5px; color: #262626; margin-top: 3px; font-weight: 500; }
@@ -372,7 +398,7 @@ select.input {
 .doc-items.has-dividers .doc-item { padding: 13px 0; }
 .doc-items.has-dividers .doc-item + .doc-item { border-top: 1px solid #EFEFEC; }
 
-.doc-footer { position: absolute; left: 52px; right: 52px; bottom: 32px; }
+.doc-footer { margin-top: auto; padding-top: 32px; position: relative; width: 100%; }
 .doc-footer.classic { text-align: center; color: var(--secondary); font-size: 10.5px; letter-spacing: .08em; }
 .doc-footer.line { border-top: 1px solid #E8E8E4; padding-top: 10px; display: flex; justify-content: space-between;
   font-size: 10px; color: var(--secondary); }
@@ -438,9 +464,10 @@ select.input {
     border-radius: 0.625rem;
   }
   .paper {
-    padding: 28px 18px 36px;
+    padding: 28px 18px 28px;
     font-size: 11px;
     max-width: 100%;
+    min-height: 480px;
   }
   .doc-name { font-size: 16px !important; }
   .doc-sub { font-size: 9.5px !important; letter-spacing: .18em !important; margin-top: 6px !important; }
@@ -450,7 +477,7 @@ select.input {
   .doc-item-title { font-size: 10px !important; }
   .doc-item-person { font-size: 12px !important; }
   .doc-item-desc { font-size: 9.5px !important; }
-  .doc-footer { left: 18px !important; right: 18px !important; bottom: 16px !important; font-size: 8.5px !important; }
+  .doc-footer { padding-top: 20px !important; font-size: 8.5px !important; }
 
   /* Touch-friendly buttons on mobile */
   .btn { min-height: 38px; }
@@ -499,8 +526,8 @@ select.input {
 .pm-footer { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font-size: 4px; color: #94A3B8; letter-spacing: .18em; }
 
 /* Drag & drop, animations, misc */
-.drag-handle { cursor: grab; }
-.drag-handle:active { cursor: grabbing; }
+.drag-handle, .service-drag-handle { cursor: grab; }
+.drag-handle:active, .service-drag-handle:active { cursor: grabbing; }
 .sortable-ghost { opacity: .3; background: #F8FAFC !important; border: 1px dashed #94A3B8 !important; }
 .sortable-chosen { background: #FFFFFF; }
 
@@ -513,6 +540,7 @@ select.input {
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Flatpickr clean light theme */
@@ -556,7 +584,6 @@ select.input {
     width: 100% !important;
     height: 100% !important;
   }
-  #app-root > *:not(main),
   #loading-screen,
   aside,
   header,
@@ -564,13 +591,38 @@ select.input {
   .icon-btn,
   .btn,
   button,
-  .modal,
   .chip,
   #toast-container,
   .lg\:col-span-5,
   .card > div:first-child:not(#live-paper),
   .card > div:last-child {
     display: none !important;
+  }
+  /* Regular print: hide all modals */
+  body:not(.modal-printing) .modal {
+    display: none !important;
+  }
+  /* When printing from inside the PDF modal (#modal-pdf) */
+  body.modal-printing #app {
+    display: none !important;
+  }
+  body.modal-printing #modal-pdf {
+    display: block !important;
+    position: static !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+  body.modal-printing #modal-pdf .modal-backdrop,
+  body.modal-printing #modal-pdf .sticky {
+    display: none !important;
+  }
+  body.modal-printing #modal-pdf .modal-panel {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
   }
   main {
     padding: 0 !important;
@@ -602,6 +654,7 @@ select.input {
     min-height: 297mm !important;
     page-break-after: avoid;
     break-after: avoid;
+    overflow: visible !important;
   }
   .is-editable [contenteditable="true"] {
     background: transparent !important;
@@ -653,9 +706,9 @@ tailwind.config = {
 
   <!-- Sidebar (desktop) -->
   <aside class="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-white border-r border-slate-200">
-    <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0">
-      <div id="brand-badge" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
-        <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+    <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
+      <div id="brand-badge" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;">
+        <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
       </div>
       <div class="min-w-0">
         <p id="brand-name" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
@@ -665,8 +718,8 @@ tailwind.config = {
     <nav id="side-nav" class="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Main navigation"></nav>
     <div class="p-3 border-t border-slate-200 shrink-0">
       <button data-action="nav" data-page="account" class="w-full flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-slate-50 transition-colors text-left group">
-        <div id="brand-avatar" class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+        <div id="brand-avatar" class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden shrink-0" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
+          <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
         </div>
         <div class="min-w-0">
           <p id="brand-profile-name" class="text-[13px] font-semibold text-slate-800 truncate group-hover:text-blue-900">Order of Service</p>
@@ -681,9 +734,9 @@ tailwind.config = {
   <div id="drawer-backdrop" class="fixed inset-0 bg-slate-900/40 z-40 hidden lg:hidden"></div>
   <aside id="drawer" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85%] bg-white border-r border-slate-200 shadow-xl flex flex-col -translate-x-full transition-transform duration-200 lg:hidden">
     <div class="flex items-center justify-between px-5 h-16 border-b border-slate-200 shrink-0">
-      <div class="flex items-center gap-3 min-w-0">
-        <div id="brand-badge-m" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+      <div class="flex items-center gap-3 min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
+        <div id="brand-badge-m" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;">
+          <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
         </div>
         <div class="min-w-0">
           <p id="brand-name-m" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
@@ -699,9 +752,9 @@ tailwind.config = {
   <!-- Mobile top header -->
   <header class="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
     <div class="flex items-center justify-between h-14 px-4">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div id="brand-badge-h" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-0.5 shrink-0 shadow-sm overflow-hidden">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+      <div class="flex items-center gap-2.5 min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
+        <div id="brand-badge-h" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-0.5 shrink-0 shadow-sm overflow-hidden" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
+          <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
         </div>
         <p id="brand-name-h" class="text-sm font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
       </div>
@@ -778,17 +831,17 @@ tailwind.config = {
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="form-label">Primary Color</label>
+            <label class="form-label" for="th-primary">Primary Color</label>
             <div class="flex gap-2 items-center">
               <input type="color" id="th-primary" class="color-input" value="#1E3A8A">
-              <input type="text" class="input color-hex font-mono text-xs" data-color-for="th-primary" value="#1E3A8A" maxlength="7" placeholder="#1E3A8A">
+              <input type="text" class="input color-hex font-mono text-xs" data-color-for="th-primary" value="#1E3A8A" maxlength="7" placeholder="#1E3A8A" aria-label="Primary Color Hex">
             </div>
           </div>
           <div>
-            <label class="form-label">Secondary Color</label>
+            <label class="form-label" for="th-secondary">Secondary Color</label>
             <div class="flex gap-2 items-center">
               <input type="color" id="th-secondary" class="color-input" value="#5C6670">
-              <input type="text" class="input color-hex font-mono text-xs" data-color-for="th-secondary" value="#5C6670" maxlength="7" placeholder="#5C6670">
+              <input type="text" class="input color-hex font-mono text-xs" data-color-for="th-secondary" value="#5C6670" maxlength="7" placeholder="#5C6670" aria-label="Secondary Color Hex">
             </div>
           </div>
         </div>
@@ -810,14 +863,14 @@ tailwind.config = {
         </div>
         <div>
           <label class="form-label">Logo Position</label>
-          <div class="seg" id="th-logo-position">
+          <div class="seg" id="th-logo-position" role="group" aria-label="Logo Position">
             <button type="button" class="seg-btn active" data-value="center">Centered</button>
             <button type="button" class="seg-btn" data-value="left">Left aligned</button>
           </div>
         </div>
         <div>
           <label class="form-label">Border Style</label>
-          <div class="seg" id="th-border">
+          <div class="seg" id="th-border" role="group" aria-label="Border Style">
             <button type="button" class="seg-btn active" data-value="double">Double frame</button>
             <button type="button" class="seg-btn" data-value="line">Top bar</button>
             <button type="button" class="seg-btn" data-value="none">None</button>
@@ -825,7 +878,7 @@ tailwind.config = {
         </div>
         <div>
           <label class="form-label">Footer Style</label>
-          <div class="seg" id="th-footer">
+          <div class="seg" id="th-footer" role="group" aria-label="Footer Style">
             <button type="button" class="seg-btn active" data-value="classic">Classic</button>
             <button type="button" class="seg-btn" data-value="line">Line</button>
             <button type="button" class="seg-btn" data-value="minimal">Minimal</button>
@@ -886,7 +939,8 @@ const App = {
   themeEditorId: null,       // theme modal target id (null = new)
   pdfPreviewId: null,        // history record in preview modal
   flatpickrs: [],            // live flatpickr instances
-  sortableInstance: null,    // Sortable instance reference
+  sortableInstance: null,    // Template Sortable instance
+  serviceSortableInstance: null, // Service Sortable instance
   searchQuery: '',           // search filter
   previewScale: 1.0,         // live preview scale
 };
@@ -974,49 +1028,90 @@ function esc(s = '') {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function safeImgSrc(src) {
+  if (!src || typeof src !== 'string') return '';
+  src = src.trim();
+  // Safe data URIs for images
+  if (/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(src)) {
+    return src;
+  }
+  // Safe relative paths starting with /
+  if (/^\/[a-zA-Z0-9_\-\.\/]+$/.test(src)) {
+    return src;
+  }
+  // Safe https URLs
+  if (/^https:\/\/[a-zA-Z0-9_\-\.:@]+(\S*)?$/i.test(src)) {
+    return src;
+  }
+  return '';
+}
+
 function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
 function isoOf(d) {
   const x = d instanceof Date ? d : new Date(d);
+  if (isNaN(x.getTime())) return new Date().toISOString().split('T')[0];
   return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
 }
 
-function dateOf(iso) { return new Date((iso || '') + 'T12:00:00'); }
+function dateOf(iso) {
+  if (!iso) return new Date();
+  const cleanIso = String(iso).split('T')[0];
+  const d = new Date(cleanIso + 'T12:00:00');
+  return isNaN(d.getTime()) ? new Date() : d;
+}
 
 function fmtLongDate(iso) {
   if (!iso) return '';
-  try { return dateOf(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
-  catch (e) { return iso; }
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  } catch (e) { return String(iso); }
 }
 
 function fmtShortDate(iso) {
   if (!iso) return '';
-  try { return dateOf(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
-  catch (e) { return iso; }
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch (e) { return String(iso); }
 }
 
 function fmtMonthDay(iso) {
   if (!iso) return { month: '', day: '' };
-  const d = dateOf(iso);
-  return { month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), day: String(d.getDate()).padStart(2, '0') };
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return { month: '', day: '' };
+    return { month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), day: String(d.getDate()).padStart(2, '0') };
+  } catch (e) {
+    return { month: '', day: '' };
+  }
 }
 
 function fmtMonthYear(iso) {
   if (!iso) return '';
-  try { return dateOf(iso).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
-  catch (e) { return ''; }
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  } catch (e) { return ''; }
 }
 
 function timeAgo(iso) {
   if (!iso) return '';
-  const now = new Date(); const then = new Date(iso);
-  const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) -
-                           new Date(then.getFullYear(), then.getMonth(), then.getDate())) / 86400000);
-  if (days <= 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 7) return days + ' days ago';
-  if (days < 30) return Math.floor(days / 7) + (days < 14 ? ' wk ago' : ' wks ago');
-  return fmtShortDate(isoOf(then));
+  try {
+    const now = new Date(); const then = new Date(iso);
+    if (isNaN(then.getTime())) return '';
+    const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) -
+                             new Date(then.getFullYear(), then.getMonth(), then.getDate())) / 86400000);
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return days + ' days ago';
+    if (days < 30) return Math.floor(days / 7) + (days < 14 ? ' wk ago' : ' wks ago');
+    return fmtShortDate(isoOf(then));
+  } catch (e) { return ''; }
 }
 
 function greeting() {
@@ -1046,8 +1141,8 @@ function mixHex(hex, white, ratio) {
 }
 
 function initialsOf(name) {
-  const words = String(name || 'R').trim().split(/\s+/).filter(Boolean);
-  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'R';
+  const words = String(name || 'O').trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'O';
 }
 
 function sanitizeFile(s) {
@@ -1056,9 +1151,15 @@ function sanitizeFile(s) {
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
+    if (!src) return reject(new Error('No image src'));
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('image failed to load'));
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => {
+      img.src = '';
+      reject(new Error('Image load timeout'));
+    }, 4000);
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
     img.src = src;
   });
 }
@@ -1084,24 +1185,31 @@ function getActiveTheme() {
 }
 
 function themePrimary(theme, church) {
+  theme = theme || {};
+  church = church || {};
   return theme.useBrandColor ? (church.brandColor || '#1E3A8A') : (theme.primary || '#1F3A5F');
 }
 
 // Shared layout parameters for the on-screen document preview
 function docParams(theme, church) {
-  const primary = themePrimary(theme, church);
+  theme = theme || getActiveTheme();
+  church = church || App.church || {};
+  const primaryRaw = themePrimary(theme, church);
+  const primary = isValidHex(primaryRaw) ? (primaryRaw.startsWith('#') ? primaryRaw : '#' + primaryRaw) : '#1F3A5F';
+  const secondaryRaw = theme.secondary || '#5C6670';
+  const secondary = isValidHex(secondaryRaw) ? (secondaryRaw.startsWith('#') ? secondaryRaw : '#' + secondaryRaw) : '#5C6670';
   const hf = theme.headingFont === 'serif' ? "'Playfair Display', Georgia, serif" : "'Plus Jakarta Sans', sans-serif";
   const bf = theme.bodyFont === 'serif' ? "'Lora', Georgia, serif" : "'Inter', sans-serif";
-  const border = theme.borderStyle || 'none';
+  const border = ['double', 'line', 'none'].includes(theme.borderStyle) ? theme.borderStyle : 'none';
   return {
     primary,
-    secondary: theme.secondary || '#5C6670',
+    secondary,
     hf, bf,
     frameColor: mixHex(primary, '#FFFFFF', 0.55),
     gap: border === 'none' ? 24 : 18,
     dividers: border === 'line',
     borderStyle: border,
-    footerStyle: theme.footerStyle || 'classic',
+    footerStyle: ['classic', 'line', 'minimal'].includes(theme.footerStyle) ? theme.footerStyle : 'classic',
     align: theme.logoPosition === 'left' ? 'left' : 'center',
   };
 }
@@ -1202,9 +1310,9 @@ function renderSettings() {
       <p class="text-xs text-slate-500 mt-0.5">Appears on every generated PDF document and throughout the app.</p>
 
       <div class="mt-5 flex flex-col sm:flex-row sm:items-center gap-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
-        <div id="logo-preview" class="w-20 h-20 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+        <div id="logo-preview" class="w-20 h-20 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm" style="width: 80px; height: 80px; min-width: 80px; min-height: 80px;">
           ${c.logo
-            ? '<img src="' + c.logo + '" alt="Church logo" class="w-full h-full object-contain p-1.5">'
+            ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="Church logo" class="w-full h-full max-w-full max-h-full object-contain p-1.5" style="max-width: 100%; max-height: 100%;">'
             : '<div class="text-center text-slate-400"><i data-lucide="image" class="w-7 h-7 mx-auto"></i><span class="text-[10px] block mt-0.5">No Logo</span></div>'}
         </div>
         <div class="min-w-0">
@@ -1214,7 +1322,7 @@ function renderSettings() {
           </div>
           <p class="text-xs text-slate-500 mt-2">Recommended format: PNG or JPG. Stored locally in your browser and embedded directly in the PDF header.</p>
         </div>
-        <input type="file" id="logo-file" accept="image/*" class="hidden">
+        <input type="file" id="logo-file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
       </div>
 
       <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1289,7 +1397,16 @@ async function saveChurchSettings() {
 }
 
 function handleLogoFile(file) {
-  if (!file || !/^image\//.test(file.type)) { toast('Please choose an image file', 'info'); return; }
+  if (!file) return;
+  const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  if (!validTypes.includes(file.type)) {
+    toast('Please choose a valid PNG, JPG, WEBP, or GIF image', 'info');
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast('Logo file must be smaller than 5MB', 'error');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
@@ -1300,17 +1417,20 @@ function handleLogoFile(file) {
       const h = Math.max(1, Math.round(img.height * scale));
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
       App.church.logo = canvas.toDataURL('image/png');
+      App.church.logoRemoved = false;
       const preview = document.getElementById('logo-preview');
       if (preview) {
-        preview.innerHTML = '<img src="' + App.church.logo + '" alt="Church logo" class="w-full h-full object-contain p-1.5">';
+        preview.innerHTML = '<img src="' + esc(safeImgSrc(App.church.logo)) + '" alt="Church logo" class="w-full h-full object-contain p-1.5">';
       }
       toast('Logo updated! Click Save Church Settings.');
     };
     img.onerror = () => toast('That image could not be loaded', 'error');
     img.src = reader.result;
   };
+  reader.onerror = () => toast('Failed to read image file', 'error');
   reader.readAsDataURL(file);
 }
 
@@ -1368,6 +1488,7 @@ async function renderTemplates() {
     </div>
   </div>
 
+  <div id="tpl-list-container">
   ${templates.length
     ? '<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">' + templates.map(templateCardHtml).join('') + '</div>'
     : `
@@ -1376,7 +1497,8 @@ async function renderTemplates() {
       <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No templates matching "' + esc(App.searchQuery) + '"' : 'No templates created yet'}</h3>
       <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create your first template to quickly prepare Sunday services.</p>
       <button class="btn btn-primary mt-5 text-xs" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
-    </div>`}`;
+    </div>`}
+  </div>`;
 }
 
 function templateItemsHtml(items) {
@@ -1687,23 +1809,47 @@ async function continueNewService() {
 }
 
 function serviceItemBlockHtml(it, idx) {
+  const safeId = esc(it.id);
   return `
-  <div class="service-item-row p-3.5 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors" data-id="${it.id}">
+  <div class="service-item-row p-3.5 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors" data-id="${safeId}">
     <div class="flex items-center justify-between gap-2 mb-1.5">
       <div class="flex items-center gap-2 min-w-0">
+        <span class="service-drag-handle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-600 p-0.5" title="Drag to reorder"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
         <span class="w-4 h-4 rounded bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-mono font-bold shrink-0">${idx + 1}</span>
-        <label class="text-sm font-bold text-slate-800 truncate" for="person-${it.id}">${esc(it.title)}</label>
+        <label id="label-item-${safeId}" class="text-sm font-bold text-slate-800 truncate" for="person-${safeId}">${esc(it.title)}</label>
       </div>
       <div class="flex items-center gap-1 shrink-0">
         ${it.requiresPerson ? '<span class="chip chip-navy text-[10px]">Assigned</span>' : '<span class="chip text-[10px]">No person</span>'}
-        <button class="icon-btn text-xs text-slate-400 hover:text-red-600" data-action="remove-service-item" data-id="${it.id}" title="Remove item"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        <button class="icon-btn text-xs text-slate-400 hover:text-blue-900" data-action="edit-service-item" data-id="${safeId}" title="Edit item details" aria-label="Edit ${esc(it.title)}"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+        <button class="icon-btn text-xs text-slate-400 hover:text-red-600" data-action="remove-service-item" data-id="${safeId}" title="Remove item" aria-label="Remove ${esc(it.title)}"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
       </div>
     </div>
     ${it.requiresPerson
-      ? `<input id="person-${it.id}" class="input text-xs py-1.5 font-medium" data-person="${it.id}" value="${esc(it.person || '')}" maxlength="60" placeholder="Assigned to (e.g. Pastor Paul, Sister Sarah)">`
+      ? `<input id="person-${safeId}" class="input text-xs py-1.5 font-medium" data-person="${safeId}" value="${esc(it.person || '')}" maxlength="60" placeholder="Assigned to (e.g. Pastor Paul, Sister Sarah)">`
       : ''}
-    <input class="input text-[11px] py-1 mt-1.5 text-slate-600 placeholder:text-slate-400" data-item-desc="${it.id}" maxlength="160" placeholder="Optional sub-note or description" value="${esc(it.description || '')}">
+    <input class="input text-[11px] py-1 mt-1.5 text-slate-600 placeholder:text-slate-400" data-item-desc="${safeId}" maxlength="160" placeholder="Optional sub-note or description" value="${esc(it.description || '')}">
   </div>`;
+}
+
+function initServiceSortable() {
+  const container = document.getElementById('se-items-container');
+  if (!container || !window.Sortable) return;
+  if (App.serviceSortableInstance) {
+    try { App.serviceSortableInstance.destroy(); } catch (e) {}
+    App.serviceSortableInstance = null;
+  }
+  App.serviceSortableInstance = new Sortable(container, {
+    handle: '.service-drag-handle',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    onEnd: (evt) => {
+      if (!App.currentService || !Array.isArray(App.currentService.items)) return;
+      const item = App.currentService.items.splice(evt.oldIndex, 1)[0];
+      App.currentService.items.splice(evt.newIndex, 0, item);
+      refreshServiceEditorItems();
+      refreshLivePreview();
+    }
+  });
 }
 
 function refreshServiceEditorItems() {
@@ -1713,6 +1859,7 @@ function refreshServiceEditorItems() {
   container.innerHTML = App.currentService.items.map(serviceItemBlockHtml).join('');
   if (countEl) countEl.textContent = App.currentService.items.length + ' items';
   refreshIcons();
+  initServiceSortable();
 }
 
 function renderServiceEditor() {
@@ -1800,7 +1947,7 @@ function renderServiceEditor() {
           <div class="flex items-center gap-2.5">
             <div class="flex items-center gap-1 bg-white rounded-md border border-slate-200 px-1 py-0.5 text-xs">
               <button class="w-5 h-5 rounded flex items-center justify-center text-slate-600 hover:bg-slate-100" data-action="zoom-preview" data-delta="-0.1" title="Zoom out">-</button>
-              <span id="zoom-level-text" class="px-1 text-[11px] text-slate-700 font-mono font-medium">100%</span>
+              <span id="zoom-level-text" class="px-1 text-[11px] text-slate-700 font-mono font-medium">${Math.round(App.previewScale * 100)}%</span>
               <button class="w-5 h-5 rounded flex items-center justify-center text-slate-600 hover:bg-slate-100" data-action="zoom-preview" data-delta="0.1" title="Zoom in">+</button>
             </div>
 
@@ -1814,7 +1961,7 @@ function renderServiceEditor() {
         </div>
 
         <div class="p-5 paper-easel overflow-x-auto flex justify-center">
-          <div id="live-paper-scaler" style="transform-origin: top center; transition: transform 0.15s ease;">
+          <div id="live-paper-scaler" style="transform-origin: top center; transition: transform 0.15s ease; transform: scale(${App.previewScale});">
             <div id="live-paper" class="is-editable">${renderDocHtml(s, App.church, getActiveTheme(), true)}</div>
           </div>
         </div>
@@ -1851,6 +1998,7 @@ function afterServiceEditor() {
   });
   App.flatpickrs.push(fp);
   bindPreviewInlineEditing();
+  initServiceSortable();
 }
 
 function refreshLivePreview() {
@@ -1866,6 +2014,16 @@ function bindPreviewInlineEditing() {
   if (!holder || !App.currentService) return;
   if (holder.dataset.inlineBound === 'true') return;
   holder.dataset.inlineBound = 'true';
+
+  // Prevent multiline breaks on single-line paper editable titles & headers
+  holder.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target && e.target.getAttribute('contenteditable') === 'true') {
+      if (!e.target.dataset.editItemDesc) {
+        e.preventDefault();
+        e.target.blur();
+      }
+    }
+  });
 
   // Clicking on service date on paper opens the date picker
   holder.addEventListener('click', (e) => {
@@ -1917,7 +2075,7 @@ function bindPreviewInlineEditing() {
       const it = App.currentService.items.find(i => i.id === id);
       if (it) {
         it.title = el.innerText.trim();
-        const rowLabel = document.querySelector(`label[for="person-${id}"]`);
+        const rowLabel = document.getElementById(`label-item-${id}`) || document.querySelector(`label[for="person-${id}"]`);
         if (rowLabel) rowLabel.textContent = it.title;
         clearTimeout(holder._saveServiceTimer);
         holder._saveServiceTimer = setTimeout(() => {
@@ -2014,10 +2172,10 @@ function renderDocHtml(service, church, theme, editable = false) {
       : '';
 
   const itemsHtml = (service.items || []).map(it => `
-      <div class="doc-item" data-item-id="${it.id}">
-        <div class="doc-item-title"${editable ? ' contenteditable="true" data-edit-item-title="' + it.id + '" title="Click to edit title"' : ''}>${esc(it.title)}</div>
-        ${it.requiresPerson ? `<div class="doc-item-person"${editable ? ' contenteditable="true" data-edit-item-person="' + it.id + '" title="Click to assign minister or volunteer"' : ''}>${esc(it.person || '')}</div>` : ''}
-        ${(it.description || editable) ? `<div class="doc-item-desc"${editable ? ' contenteditable="true" data-edit-item-desc="' + it.id + '" title="Click to edit notes / scripture"' : ''}>${esc(it.description || '')}</div>` : ''}
+      <div class="doc-item" data-item-id="${esc(it.id)}">
+        <div class="doc-item-title"${editable ? ' contenteditable="true" data-edit-item-title="' + esc(it.id) + '" title="Click to edit title"' : ''}>${esc(it.title)}</div>
+        ${it.requiresPerson ? `<div class="doc-item-person"${editable ? ' contenteditable="true" data-edit-item-person="' + esc(it.id) + '" title="Click to assign minister or volunteer"' : ''}>${esc(it.person || '')}</div>` : ''}
+        ${(it.description || editable) ? `<div class="doc-item-desc"${editable ? ' contenteditable="true" data-edit-item-desc="' + esc(it.id) + '" title="Click to edit notes / scripture"' : ''}>${esc(it.description || '')}</div>` : ''}
       </div>`).join('');
 
   let footerHtml = '';
@@ -2035,7 +2193,7 @@ function renderDocHtml(service, church, theme, editable = false) {
     ${chrome}
     <div class="doc-head${left ? ' left' : ''}">
       <div class="doc-logo">
-        ${church.logo ? '<img src="' + church.logo + '" alt="' + esc(name) + ' logo">' : '<div class="doc-logo-ph">' + esc(initials) + '</div>'}
+        ${church.logo ? '<img src="' + esc(safeImgSrc(church.logo)) + '" alt="' + esc(name) + ' logo">' : '<div class="doc-logo-ph">' + esc(initials) + '</div>'}
       </div>
       <div class="doc-name"${editable ? ' contenteditable="true" data-edit-target="church-name" title="Click to edit church name"' : ''}>${esc(name)}</div>
       ${church.tagline ? '<div class="doc-tagline">' + esc(church.tagline) + '</div>' : ''}
@@ -2412,9 +2570,21 @@ async function captureThumbnail(service, church, theme) {
   document.body.appendChild(holder);
   try {
     const paper = holder.firstElementChild;
-    if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
-    const logoImg = paper.querySelector('img');
-    if (logoImg && !logoImg.complete) await new Promise(r => { logoImg.onload = logoImg.onerror = r; });
+    if (document.fonts && document.fonts.ready) {
+      try {
+        await Promise.race([
+          document.fonts.ready,
+          new Promise(r => setTimeout(r, 1200))
+        ]);
+      } catch (e) {}
+    }
+    const logoImg = paper ? paper.querySelector('img') : null;
+    if (logoImg && !logoImg.complete) {
+      await Promise.race([
+        new Promise(r => { logoImg.onload = logoImg.onerror = r; }),
+        new Promise(r => setTimeout(r, 1500))
+      ]);
+    }
     const canvas = await html2canvas(paper, {
       scale: 240 / 620,
       backgroundColor: '#FFFFFF',
@@ -2423,7 +2593,7 @@ async function captureThumbnail(service, church, theme) {
     });
     return canvas.toDataURL('image/jpeg', 0.75);
   } finally {
-    document.body.removeChild(holder);
+    if (holder.parentNode) holder.parentNode.removeChild(holder);
   }
 }
 
@@ -2455,6 +2625,7 @@ async function renderHistory() {
     </div>
   </div>
 
+  <div id="history-list-container">
   ${records.length
     ? '<div class="space-y-3.5 max-w-4xl">' + records.map(historyCardHtml).join('') + '</div>'
     : `
@@ -2463,7 +2634,8 @@ async function renderHistory() {
       <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No PDFs match search' : 'No PDFs generated yet'}</h3>
       <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Generate your first order of service PDF to automatically save a snapshot here.</p>
       <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
-    </div>`}`;
+    </div>`}
+  </div>`;
 }
 
 function historyCardHtml(rec) {
@@ -2474,7 +2646,7 @@ function historyCardHtml(rec) {
     <div class="w-full sm:w-24 shrink-0">
       <div class="thumb-box cursor-pointer" data-action="preview-history" data-id="${rec.id}">
         ${rec.thumbnail
-          ? '<img src="' + rec.thumbnail + '" alt="PDF thumbnail">'
+          ? '<img src="' + esc(safeImgSrc(rec.thumbnail)) + '" alt="PDF thumbnail">'
           : '<div class="w-full h-full flex items-center justify-center text-slate-400"><i data-lucide="file-text" class="w-6 h-6"></i></div>'}
       </div>
     </div>
@@ -2559,6 +2731,7 @@ async function renderSundays() {
     </div>
   </div>
 
+  <div id="sundays-list-container">
   ${services.length
     ? '<div class="card max-w-4xl divide-y divide-slate-100">' + services.map(sundayRowHtml).join('') + '</div>'
     : `
@@ -2567,7 +2740,8 @@ async function renderSundays() {
       <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No services found' : 'No saved Sundays yet'}</h3>
       <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create a Sunday service, assign ministers, and save it here.</p>
       <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
-    </div>`}`;
+    </div>`}
+  </div>`;
 }
 
 function sundayRowHtml(s) {
@@ -2648,8 +2822,8 @@ async function renderDashboard() {
   <div class="card p-5 sm:p-6 mb-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
       <div class="flex items-center gap-4 min-w-0">
-        <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm overflow-hidden">
-          ${App.church && App.church.logo ? `<img src="${App.church.logo}" alt="Logo" class="w-full h-full object-contain">` : `<img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">`}
+        <div class="dashboard-logo-box rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm" style="width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; flex-shrink: 0; overflow: hidden;">
+          ${App.church && App.church.logo ? `<img src="${esc(safeImgSrc(App.church.logo))}" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">` : `<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">`}
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2.5 flex-wrap">
@@ -2966,8 +3140,8 @@ async function renderAccount() {
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
     <div class="card p-6">
       <div class="flex flex-col items-center text-center">
-        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm">
-          ${c.logo ? '<img src="' + c.logo + '" alt="' + esc(c.name) + ' logo" class="w-full h-full object-contain">' : '<img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">'}
+        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm" style="width: 64px; height: 64px; min-width: 64px; min-height: 64px;">
+          ${c.logo ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="' + esc(c.name) + ' logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">' : '<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">'}
         </div>
         <h2 class="text-lg font-bold mt-3 text-slate-900">${esc(c.name || 'Redeem Church')}</h2>
         <p class="text-xs text-slate-500 mt-0.5 break-all">${esc(c.email || 'hello@redeemchurch.org')}</p>
@@ -3066,25 +3240,123 @@ async function exportBackupJson() {
 
 async function handleBackupFile(file) {
   if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    toast('Backup file is too large (max 10MB)', 'error');
+    return;
+  }
   try {
     const text = await file.text();
-    const data = JSON.parse(text);
-    if (!data.templates || !data.church) {
-      toast('Invalid backup format', 'error');
+    // Prevent prototype pollution in JSON payload
+    if (/"(?:__proto__|constructor|prototype)"\s*:/i.test(text)) {
+      toast('Security warning: invalid properties detected in backup file', 'error');
       return;
     }
+    const data = JSON.parse(text);
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.templates) || !Array.isArray(data.church)) {
+      toast('Invalid backup format: expected church and templates arrays', 'error');
+      return;
+    }
+
+    const cleanChurch = data.church.map(c => {
+      if (!c || typeof c !== 'object') return null;
+      return {
+        id: String(c.id || 'main'),
+        name: String(c.name || 'Redeem Church').slice(0, 100),
+        tagline: String(c.tagline || '').slice(0, 120),
+        address: String(c.address || '').slice(0, 200),
+        phone: String(c.phone || '').slice(0, 50),
+        email: String(c.email || '').slice(0, 100),
+        website: String(c.website || '').slice(0, 100),
+        brandColor: isValidHex(c.brandColor) ? c.brandColor : '#1E3A8A',
+        logo: c.logo ? safeImgSrc(String(c.logo)) : null,
+        logoRemoved: !!c.logoRemoved,
+        activeThemeId: c.activeThemeId ? String(c.activeThemeId).slice(0, 50) : null,
+        createdAt: c.createdAt || new Date().toISOString()
+      };
+    }).filter(Boolean);
+
+    const cleanTemplates = (data.templates || []).map(t => {
+      if (!t || typeof t !== 'object') return null;
+      return {
+        id: String(t.id || uid()),
+        name: String(t.name || 'Untitled Template').slice(0, 100),
+        description: String(t.description || '').slice(0, 300),
+        items: Array.isArray(t.items) ? t.items.map(it => ({
+          id: String(it.id || uid()),
+          title: String(it.title || 'Item').slice(0, 100),
+          description: String(it.description || '').slice(0, 300),
+          requiresPerson: !!it.requiresPerson
+        })) : [],
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: t.updatedAt || new Date().toISOString()
+      };
+    }).filter(Boolean);
+
+    const cleanServices = (Array.isArray(data.services) ? data.services : []).map(s => {
+      if (!s || typeof s !== 'object') return null;
+      return {
+        id: String(s.id || uid()),
+        templateId: s.templateId ? String(s.templateId) : null,
+        templateName: s.templateName ? String(s.templateName).slice(0, 100) : '',
+        date: String(s.date || isoOf(nextSunday())).slice(0, 30),
+        theme: String(s.theme || '').slice(0, 150),
+        description: String(s.description || '').slice(0, 300),
+        items: Array.isArray(s.items) ? s.items.map(it => ({
+          id: String(it.id || uid()),
+          title: String(it.title || 'Item').slice(0, 100),
+          description: String(it.description || '').slice(0, 300),
+          requiresPerson: !!it.requiresPerson,
+          person: String(it.person || '').slice(0, 100)
+        })) : [],
+        createdAt: s.createdAt || new Date().toISOString(),
+        updatedAt: s.updatedAt || new Date().toISOString()
+      };
+    }).filter(Boolean);
+
+    const cleanThemes = (Array.isArray(data.themes) ? data.themes : []).map(th => {
+      if (!th || typeof th !== 'object') return null;
+      return {
+        id: String(th.id || uid()),
+        name: String(th.name || 'Theme').slice(0, 60),
+        primary: isValidHex(th.primary) ? th.primary : '#1E3A8A',
+        secondary: isValidHex(th.secondary) ? th.secondary : '#5C6670',
+        headingFont: th.headingFont === 'serif' ? 'serif' : 'sans',
+        bodyFont: th.bodyFont === 'serif' ? 'serif' : 'sans',
+        borderStyle: ['none', 'line', 'double'].includes(th.borderStyle) ? th.borderStyle : 'none',
+        footerStyle: ['classic', 'line', 'minimal'].includes(th.footerStyle) ? th.footerStyle : 'classic',
+        logoPosition: th.logoPosition === 'left' ? 'left' : 'center',
+        isDefault: !!th.isDefault
+      };
+    }).filter(Boolean);
+
+    const cleanHistory = (Array.isArray(data.pdfHistory) ? data.pdfHistory : []).map(h => {
+      if (!h || typeof h !== 'object') return null;
+      return {
+        id: String(h.id || uid()),
+        serviceId: h.serviceId ? String(h.serviceId) : null,
+        title: String(h.title || 'Order of Service').slice(0, 100),
+        date: String(h.date || '').slice(0, 30),
+        createdAt: h.createdAt || new Date().toISOString(),
+        service: h.service && typeof h.service === 'object' ? h.service : null,
+        church: h.church && typeof h.church === 'object' ? h.church : null,
+        theme: h.theme && typeof h.theme === 'object' ? h.theme : null,
+        fileName: sanitizeFile(String(h.fileName || 'service.pdf')),
+        thumbnail: h.thumbnail ? safeImgSrc(String(h.thumbnail)) : null
+      };
+    }).filter(Boolean);
+
     const ok = await confirmDialog({
       title: 'Restore backup data?',
-      text: 'Import ' + data.templates.length + ' templates and ' + (data.services ? data.services.length : 0) + ' services.',
+      text: 'Import ' + cleanTemplates.length + ' templates and ' + cleanServices.length + ' services.',
       confirmText: 'Restore',
     });
     if (!ok) return;
 
-    if (data.church && data.church.length) await db.church.bulkPut(data.church);
-    if (data.templates && data.templates.length) await db.templates.bulkPut(data.templates);
-    if (data.services && data.services.length) await db.services.bulkPut(data.services);
-    if (data.themes && data.themes.length) await db.themes.bulkPut(data.themes);
-    if (data.pdfHistory && data.pdfHistory.length) await db.pdfHistory.bulkPut(data.pdfHistory);
+    if (cleanChurch.length) await db.church.bulkPut(cleanChurch);
+    if (cleanTemplates.length) await db.templates.bulkPut(cleanTemplates);
+    if (cleanServices.length) await db.services.bulkPut(cleanServices);
+    if (cleanThemes.length) await db.themes.bulkPut(cleanThemes);
+    if (cleanHistory.length) await db.pdfHistory.bulkPut(cleanHistory);
 
     App.church = await db.church.get('main');
     await loadThemes();
@@ -3094,7 +3366,7 @@ async function handleBackupFile(file) {
     showPage('dashboard');
   } catch (err) {
     console.error(err);
-    toast('Failed to restore backup', 'error');
+    toast('Failed to restore backup: ' + (err.message || 'corrupt file'), 'error');
   }
 }
 
@@ -3274,6 +3546,71 @@ function closeDrawer() {
 // GLOBAL EVENT DISPATCHER
 // ======================================
 
+let searchDebounceTimer = null;
+function handleSearchInput(type, value) {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(async () => {
+    App.searchQuery = value.trim();
+    if (type === 'templates') {
+      const container = document.getElementById('tpl-list-container');
+      if (container && App.page === 'templates') {
+        let templates = (await db.templates.toArray()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        if (App.searchQuery) {
+          const q = App.searchQuery.toLowerCase();
+          templates = templates.filter(t => t.name.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q)));
+        }
+        container.innerHTML = templates.length
+          ? '<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">' + templates.map(templateCardHtml).join('') + '</div>'
+          : `<div class="card p-12 text-center max-w-xl mx-auto">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="layout-template" class="w-6 h-6"></i></div>
+              <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No templates matching "' + esc(App.searchQuery) + '"' : 'No templates created yet'}</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create your first template to quickly prepare Sunday services.</p>
+              <button class="btn btn-primary mt-5 text-xs" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
+            </div>`;
+        refreshIcons();
+      }
+    } else if (type === 'sundays') {
+      const container = document.getElementById('sundays-list-container');
+      if (container && App.page === 'sundays') {
+        let services = (await db.services.toArray())
+          .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+        if (App.searchQuery) {
+          const q = App.searchQuery.toLowerCase();
+          services = services.filter(s => (s.theme && s.theme.toLowerCase().includes(q)) || (s.templateName && s.templateName.toLowerCase().includes(q)) || (s.date && s.date.includes(q)));
+        }
+        container.innerHTML = services.length
+          ? '<div class="card max-w-4xl divide-y divide-slate-100">' + services.map(sundayRowHtml).join('') + '</div>'
+          : `<div class="card p-12 text-center max-w-2xl mx-auto">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="calendar-days" class="w-6 h-6"></i></div>
+              <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No services found' : 'No saved Sundays yet'}</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create a Sunday service, assign ministers, and save it here.</p>
+              <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+            </div>`;
+        refreshIcons();
+      }
+    } else if (type === 'history') {
+      const container = document.getElementById('history-list-container');
+      if (container && App.page === 'history') {
+        let records = (await db.pdfHistory.toArray())
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        if (App.searchQuery) {
+          const q = App.searchQuery.toLowerCase();
+          records = records.filter(r => (r.service && r.service.theme && r.service.theme.toLowerCase().includes(q)) || (r.date && r.date.includes(q)) || (r.fileName && r.fileName.toLowerCase().includes(q)));
+        }
+        container.innerHTML = records.length
+          ? '<div class="space-y-3.5 max-w-4xl">' + records.map(historyCardHtml).join('') + '</div>'
+          : `<div class="card p-12 text-center max-w-2xl mx-auto">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+              <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No PDFs match search' : 'No PDFs generated yet'}</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Generate your first order of service PDF to automatically save a snapshot here.</p>
+              <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+            </div>`;
+        refreshIcons();
+      }
+    }
+  }, 100);
+}
+
 function bindGlobalEvents() {
   document.addEventListener('click', (e) => {
     // Modal backdrop close
@@ -3321,7 +3658,11 @@ function bindGlobalEvents() {
       'preview-history':          () => previewHistoryRecord(id),
       'download-history':         () => downloadHistoryPdf(id),
       'download-history-current': () => { if (App.pdfPreviewId) downloadHistoryPdf(App.pdfPreviewId); },
-      'print-history-current':    () => window.print(),
+      'print-history-current':    () => {
+        document.body.classList.add('modal-printing');
+        window.print();
+        setTimeout(() => document.body.classList.remove('modal-printing'), 500);
+      },
       'delete-history':           () => deleteHistoryRecord(id),
       'set-theme':                () => setActiveTheme(id),
       'new-theme':                () => openThemeEditor(null),
@@ -3329,18 +3670,38 @@ function bindGlobalEvents() {
       'delete-theme':             () => deleteTheme(id),
       'save-theme':               () => saveThemeFromModal(),
       'logo-upload':              () => { const f = document.getElementById('logo-file'); if (f) f.click(); },
-      'logo-remove':              () => { App.church.logo = null; showPage('settings'); },
+      'logo-remove':              async () => {
+        App.church.logo = null;
+        App.church.logoRemoved = true;
+        try { await db.church.put(App.church); } catch (e) {}
+        updateBranding();
+        showPage('settings');
+        toast('Logo removed');
+      },
       'save-settings':            () => saveChurchSettings(),
       'sign-out':                 () => signOut(),
       'export-backup':            () => exportBackupJson(),
       'import-backup':            () => { const f = document.getElementById('backup-file'); if (f) f.click(); },
       'print-live-preview':       () => window.print(),
       'add-service-item':         () => openItemModal(null, 'service'),
-      'remove-service-item':      () => {
+      'edit-service-item':        () => {
+        const it = (App.currentService && App.currentService.items.find(i => i.id === id)) || null;
+        if (it) openItemModal(it, 'service');
+      },
+      'remove-service-item':      async () => {
         if (!App.currentService) return;
+        const it = App.currentService.items.find(i => i.id === id);
+        const name = it ? it.title : 'this item';
+        const ok = await confirmDialog({
+          title: 'Remove service item?',
+          text: `Are you sure you want to remove "${name}" from this service?`,
+          confirmText: 'Remove'
+        });
+        if (!ok) return;
         App.currentService.items = App.currentService.items.filter(i => i.id !== id);
         refreshServiceEditorItems();
         refreshLivePreview();
+        toast('Item removed');
       },
       'zoom-preview':             () => {
         const delta = parseFloat(t.dataset.delta || '0');
@@ -3370,44 +3731,17 @@ function bindGlobalEvents() {
     const el = e.target;
     if (!el || (!el.id && !el.dataset)) return;
 
-    // Search inputs
+    // Search inputs (in-place filtering without destroying the active input)
     if (el.id === 'tpl-search-input') {
-      App.searchQuery = el.value.trim();
-      renderTemplates().then(html => {
-        const viewEl = document.getElementById('view');
-        if (viewEl && App.page === 'templates') {
-          viewEl.innerHTML = '<div class="view-enter">' + html + '</div>';
-          refreshIcons();
-          const inp = document.getElementById('tpl-search-input');
-          if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-        }
-      });
+      handleSearchInput('templates', el.value);
       return;
     }
     if (el.id === 'sundays-search-input') {
-      App.searchQuery = el.value.trim();
-      renderSundays().then(html => {
-        const viewEl = document.getElementById('view');
-        if (viewEl && App.page === 'sundays') {
-          viewEl.innerHTML = '<div class="view-enter">' + html + '</div>';
-          refreshIcons();
-          const inp = document.getElementById('sundays-search-input');
-          if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-        }
-      });
+      handleSearchInput('sundays', el.value);
       return;
     }
     if (el.id === 'history-search-input') {
-      App.searchQuery = el.value.trim();
-      renderHistory().then(html => {
-        const viewEl = document.getElementById('view');
-        if (viewEl && App.page === 'history') {
-          viewEl.innerHTML = '<div class="view-enter">' + html + '</div>';
-          refreshIcons();
-          const inp = document.getElementById('history-search-input');
-          if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-        }
-      });
+      handleSearchInput('history', el.value);
       return;
     }
 
@@ -3511,7 +3845,7 @@ async function boot() {
     App.church = await db.church.get('main');
     if (App.church) {
       let changed = false;
-      if (!App.church.logo) { App.church.logo = '/logo.png'; changed = true; }
+      if (!App.church.logo && !App.church.logoRemoved) { App.church.logo = '/logo.png'; changed = true; }
       if (App.church.name === 'Redeem Church') {
         App.church.name = 'Order of Service';
         App.church.tagline = 'Plan • Create • Worship';

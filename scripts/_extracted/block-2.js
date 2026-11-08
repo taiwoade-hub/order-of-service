@@ -11,9 +11,14 @@ const App = {
   currentTemplate: null,     // template being edited (with isNew flag)
   currentService: null,      // service being edited
   editingItemId: null,       // service-item modal target
+  itemModalMode: 'template', // 'template' or 'service'
   themeEditorId: null,       // theme modal target id (null = new)
   pdfPreviewId: null,        // history record in preview modal
   flatpickrs: [],            // live flatpickr instances
+  sortableInstance: null,    // Template Sortable instance
+  serviceSortableInstance: null, // Service Sortable instance
+  searchQuery: '',           // search filter
+  previewScale: 1.0,         // live preview scale
 };
 
 const NAV_ITEMS = [
@@ -24,62 +29,62 @@ const NAV_ITEMS = [
   { id: 'history',     label: 'PDF History',        icon: 'history' },
   { id: 'themes',      label: 'Themes',             icon: 'palette' },
   { id: 'settings',    label: 'Church Settings',    icon: 'settings' },
-  { id: 'account',     label: 'Account',            icon: 'user' },
+  { id: 'account',     label: 'Account & Backup',   icon: 'user' },
 ];
 const BOTTOM_NAV = ['dashboard', 'templates', 'newService', 'history', 'settings'];
 const NAV_PARENT = { templateEditor: 'templates', serviceEditor: 'sundays' };
 
 const THEME_PRESETS = [
-  { id: 'theme-classic', name: 'Classic', builtIn: true, primary: '#1F3A5F', secondary: '#5C6670',
+  { id: 'theme-classic', name: 'Classic Liturgy', builtIn: true, primary: '#1F3A5F', secondary: '#5C6670',
     headingFont: 'serif', bodyFont: 'serif', logoPosition: 'center', borderStyle: 'double', footerStyle: 'classic' },
-  { id: 'theme-modern', name: 'Modern', builtIn: true, useBrandColor: true, primary: '#1E40AF', secondary: '#525252',
+  { id: 'theme-modern', name: 'Modern Clean', builtIn: true, useBrandColor: true, primary: '#1E3A8A', secondary: '#525252',
     headingFont: 'sans', bodyFont: 'sans', logoPosition: 'center', borderStyle: 'line', footerStyle: 'line' },
-  { id: 'theme-minimal', name: 'Minimal', builtIn: true, primary: '#262626', secondary: '#8A8A8A',
+  { id: 'theme-minimal', name: 'Minimalist', builtIn: true, primary: '#171717', secondary: '#737373',
     headingFont: 'sans', bodyFont: 'sans', logoPosition: 'center', borderStyle: 'none', footerStyle: 'minimal' },
 ];
 
 const DEFAULT_TEMPLATES = [
-  { name: 'Sunday Worship Service', description: 'Regular Sunday worship service', items: [
+  { name: 'Sunday Worship Service', description: 'Standard Sunday celebration with praise, sermon and ministration', items: [
     ['Opening Prayer', '', true],
-    ['Praise & Worship', '', true],
-    ['Scripture Reading', '', true],
-    ['Choir Ministration', 'Ministration by the choir', true],
+    ['Praise & Worship', 'Congregational worship session', true],
+    ['Scripture Reading', 'Selected chapter of the day', true],
+    ['Choir Ministration', 'Special anthem by the choir', true],
     ['Congregational Prayer', '', true],
-    ['Sermon', '', true],
-    ['Offering', '', true],
-    ['Announcements', 'Church notices and upcoming events', false],
-    ['Benediction', '', true],
+    ['Sermon', 'Word ministration and message', true],
+    ['Offering & Tithes', '', true],
+    ['Announcements', 'Weekly bulletins, events and welcome to first-timers', false],
+    ['Benediction', 'Closing blessing', true],
   ]},
-  { name: 'Thanksgiving Service', description: 'Service of thanksgiving and testimony', items: [
+  { name: 'Thanksgiving Celebration', description: 'Service of praise, testimonies and celebration of blessings', items: [
     ['Opening Prayer', '', true],
-    ['Praise & Worship', '', true],
-    ['Thanksgiving Testimonies', 'Members share testimonies of God\'s faithfulness', true],
+    ['Praise & Worship', 'Joyful thanksgiving praise', true],
+    ['Thanksgiving Testimonies', 'Members share testimonies of God\'s goodness', true],
     ['Scripture Reading', '', true],
     ['Special Ministration', '', true],
-    ['Sermon', '', true],
-    ['Thanksgiving Offering', '', true],
-    ['Announcements', 'Church notices and upcoming events', false],
+    ['Sermon', 'Message of gratitude and faith', true],
+    ['Thanksgiving Offering', 'Harvest offering and seed', true],
+    ['Announcements', 'Upcoming programs and notifications', false],
     ['Benediction', '', true],
   ]},
-  { name: 'Youth Service', description: 'Energetic service led by the youth fellowship', items: [
+  { name: 'Youth Ignite Service', description: 'Dynamic, creative service led by the youth ministry', items: [
     ['Opening Prayer', '', true],
-    ['Praise & Worship', '', true],
+    ['Praise & Worship', 'Energetic youth band ministration', true],
     ['Scripture Reading', '', true],
-    ['Youth Presentation', 'Drama, spoken word or creative ministration', true],
+    ['Youth Creative Presentation', 'Drama, spoken word or choreography', true],
     ['Choir Ministration', '', true],
-    ['Sermon', '', true],
+    ['Sermon', 'Youth-focused teaching and discussion', true],
     ['Offering', '', true],
     ['Announcements', '', false],
     ['Benediction', '', true],
   ]},
-  { name: 'Children Service', description: 'Sunday program for the children\'s church', items: [
+  { name: 'Children & Family Service', description: 'Interactive service structured for young worshippers', items: [
     ['Welcome & Opening Prayer', '', true],
-    ['Songs & Praise', '', true],
-    ['Memory Verse', '', true],
-    ['Bible Story', 'Storytelling with lessons', true],
+    ['Kids Praise & Worship', 'Action songs and praise', true],
+    ['Memory Verse Recitation', '', true],
+    ['Illustrated Bible Story', 'Engaging audiovisual lesson', true],
     ['Bible Quiz & Games', '', true],
-    ['Crafts & Activities', '', true],
-    ['Closing Prayer', '', true],
+    ['Offering & Dedication', '', true],
+    ['Closing Prayer & Blessing', '', true],
   ]},
 ];
 
@@ -99,49 +104,90 @@ function esc(s = '') {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function safeImgSrc(src) {
+  if (!src || typeof src !== 'string') return '';
+  src = src.trim();
+  // Safe data URIs for images
+  if (/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(src)) {
+    return src;
+  }
+  // Safe relative paths starting with /
+  if (/^\/[a-zA-Z0-9_\-\.\/]+$/.test(src)) {
+    return src;
+  }
+  // Safe https URLs
+  if (/^https:\/\/[a-zA-Z0-9_\-\.:@]+(\S*)?$/i.test(src)) {
+    return src;
+  }
+  return '';
+}
+
 function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
 function isoOf(d) {
   const x = d instanceof Date ? d : new Date(d);
+  if (isNaN(x.getTime())) return new Date().toISOString().split('T')[0];
   return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
 }
 
-function dateOf(iso) { return new Date((iso || '') + 'T12:00:00'); }
+function dateOf(iso) {
+  if (!iso) return new Date();
+  const cleanIso = String(iso).split('T')[0];
+  const d = new Date(cleanIso + 'T12:00:00');
+  return isNaN(d.getTime()) ? new Date() : d;
+}
 
 function fmtLongDate(iso) {
   if (!iso) return '';
-  try { return dateOf(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
-  catch (e) { return iso; }
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  } catch (e) { return String(iso); }
 }
 
 function fmtShortDate(iso) {
   if (!iso) return '';
-  try { return dateOf(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
-  catch (e) { return iso; }
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch (e) { return String(iso); }
 }
 
 function fmtMonthDay(iso) {
   if (!iso) return { month: '', day: '' };
-  const d = dateOf(iso);
-  return { month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), day: String(d.getDate()).padStart(2, '0') };
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return { month: '', day: '' };
+    return { month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), day: String(d.getDate()).padStart(2, '0') };
+  } catch (e) {
+    return { month: '', day: '' };
+  }
 }
 
 function fmtMonthYear(iso) {
   if (!iso) return '';
-  try { return dateOf(iso).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
-  catch (e) { return ''; }
+  try {
+    const d = dateOf(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  } catch (e) { return ''; }
 }
 
 function timeAgo(iso) {
   if (!iso) return '';
-  const now = new Date(); const then = new Date(iso);
-  const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) -
-                           new Date(then.getFullYear(), then.getMonth(), then.getDate())) / 86400000);
-  if (days <= 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 7) return days + ' days ago';
-  if (days < 30) return Math.floor(days / 7) + (days < 14 ? ' week ago' : ' weeks ago');
-  return fmtShortDate(isoOf(then));
+  try {
+    const now = new Date(); const then = new Date(iso);
+    if (isNaN(then.getTime())) return '';
+    const days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) -
+                             new Date(then.getFullYear(), then.getMonth(), then.getDate())) / 86400000);
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return days + ' days ago';
+    if (days < 30) return Math.floor(days / 7) + (days < 14 ? ' wk ago' : ' wks ago');
+    return fmtShortDate(isoOf(then));
+  } catch (e) { return ''; }
 }
 
 function greeting() {
@@ -154,7 +200,7 @@ function greeting() {
 function hexToRgb(hex) {
   let m = String(hex || '').replace('#', '').trim();
   if (m.length === 3) m = m.split('').map(c => c + c).join('');
-  if (!/^[0-9a-fA-F]{6}$/.test(m)) return [30, 64, 175];
+  if (!/^[0-9a-fA-F]{6}$/.test(m)) return [30, 58, 138];
   const n = parseInt(m, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
@@ -164,15 +210,15 @@ function isValidHex(hex) {
   return /^#?[0-9a-fA-F]{3}$|^#?[0-9a-fA-F]{6}$/.test(m);
 }
 
-function mixHex(hex, white, ratio) { // ratio = amount of white (0..1)
+function mixHex(hex, white, ratio) {
   const a = hexToRgb(hex), b = hexToRgb(white);
   const c = a.map((v, i) => Math.round(v + (b[i] - v) * ratio));
   return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
 function initialsOf(name) {
-  const words = String(name || 'R').trim().split(/\s+/).filter(Boolean);
-  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'R';
+  const words = String(name || 'O').trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'O';
 }
 
 function sanitizeFile(s) {
@@ -181,9 +227,15 @@ function sanitizeFile(s) {
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
+    if (!src) return reject(new Error('No image src'));
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('image failed to load'));
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => {
+      img.src = '';
+      reject(new Error('Image load timeout'));
+    }, 4000);
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
     img.src = src;
   });
 }
@@ -196,10 +248,12 @@ function nextSunday() {
 }
 
 function refreshIcons() {
-  if (window.lucide && lucide.createIcons) { try { lucide.createIcons(); } catch (e) { /* non-fatal */ } }
+  if (window.lucide && lucide.createIcons) {
+    try { lucide.createIcons(); } catch (e) { /* non-fatal */ }
+  }
 }
 
-// Effective theme used by preview + PDF (resolves brand-color themes)
+// Effective theme used by preview + PDF
 function getActiveTheme() {
   const id = App.church && App.church.activeThemeId;
   const list = App.themeCache || [];
@@ -207,27 +261,35 @@ function getActiveTheme() {
 }
 
 function themePrimary(theme, church) {
-  return theme.useBrandColor ? (church.brandColor || '#1E40AF') : (theme.primary || '#1F3A5F');
+  theme = theme || {};
+  church = church || {};
+  return theme.useBrandColor ? (church.brandColor || '#1E3A8A') : (theme.primary || '#1F3A5F');
 }
 
 // Shared layout parameters for the on-screen document preview
 function docParams(theme, church) {
-  const primary = themePrimary(theme, church);
-  const hf = theme.headingFont === 'serif' ? "'Playfair Display', Georgia, serif" : "'Inter', sans-serif";
+  theme = theme || getActiveTheme();
+  church = church || App.church || {};
+  const primaryRaw = themePrimary(theme, church);
+  const primary = isValidHex(primaryRaw) ? (primaryRaw.startsWith('#') ? primaryRaw : '#' + primaryRaw) : '#1F3A5F';
+  const secondaryRaw = theme.secondary || '#5C6670';
+  const secondary = isValidHex(secondaryRaw) ? (secondaryRaw.startsWith('#') ? secondaryRaw : '#' + secondaryRaw) : '#5C6670';
+  const hf = theme.headingFont === 'serif' ? "'Playfair Display', Georgia, serif" : "'Plus Jakarta Sans', sans-serif";
   const bf = theme.bodyFont === 'serif' ? "'Lora', Georgia, serif" : "'Inter', sans-serif";
-  const border = theme.borderStyle || 'none';
+  const border = ['double', 'line', 'none'].includes(theme.borderStyle) ? theme.borderStyle : 'none';
   return {
     primary,
-    secondary: theme.secondary || '#737373',
+    secondary,
     hf, bf,
     frameColor: mixHex(primary, '#FFFFFF', 0.55),
-    gap: border === 'none' ? 26 : 20,
+    gap: border === 'none' ? 24 : 18,
     dividers: border === 'line',
     borderStyle: border,
-    footerStyle: theme.footerStyle || 'classic',
+    footerStyle: ['classic', 'line', 'minimal'].includes(theme.footerStyle) ? theme.footerStyle : 'classic',
     align: theme.logoPosition === 'left' ? 'left' : 'center',
   };
 }
+
 // ======================================
 // DATABASE
 // ======================================
@@ -246,11 +308,12 @@ async function seedIfEmpty() {
   if (await db.church.count() === 0) {
     await db.church.add({
       id: 'main',
-      name: 'Redeem Church',
-      tagline: '',
-      address: '', phone: '', email: '', website: '',
-      brandColor: '#1E40AF',
-      logo: null,
+      name: 'Order of Service',
+      tagline: 'Plan • Create • Worship',
+      address: '12 Grace Avenue, Lagos', phone: '+234 800 000 0000', 
+      email: 'hello@orderofservice.app', website: 'orderofservice.app',
+      brandColor: '#1E3A8A',
+      logo: '/logo.png',
       activeThemeId: 'theme-classic',
       createdAt: new Date().toISOString(),
     });
@@ -277,79 +340,84 @@ async function loadThemes() {
 }
 
 // ======================================
-// CHURCH SETTINGS
+// CHURCH SETTINGS & BRANDING
 // ======================================
 
 function applyAccent() {
-  const hex = (App.church && App.church.brandColor) || '#1E40AF';
+  const hex = (App.church && App.church.brandColor) || '#1E3A8A';
   const rgb = hexToRgb(hex);
   document.documentElement.style.setProperty('--accent-rgb', rgb.join(' '));
 }
 
 function updateBranding() {
   const c = App.church || {};
-  const name = c.name || 'Redeem Church';
-  const initials = initialsOf(name);
+  const name = c.name || 'Order of Service';
+  const logo = c.logo || '/logo.png';
+  const logoIcon = '/logo-icon.png';
   ['brand-badge', 'brand-badge-m', 'brand-badge-h'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.textContent = initials;
+    const el = document.getElementById(id); 
+    if (el) {
+      el.innerHTML = '<img src="' + logoIcon + '" alt="Order of Service" class="w-full h-full object-contain">';
+    }
   });
   ['brand-name', 'brand-name-m', 'brand-name-h', 'brand-profile-name'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.textContent = name;
+    const el = document.getElementById(id); 
+    if (el) el.textContent = name;
   });
   const avatar = document.getElementById('brand-avatar');
   if (avatar) {
-    avatar.innerHTML = c.logo
-      ? '<img src="' + c.logo + '" alt="' + esc(name) + ' logo" class="w-full h-full object-cover">'
-      : esc(initials);
+    avatar.innerHTML = '<img src="' + logoIcon + '" alt="' + esc(name) + ' logo" class="w-full h-full object-contain">';
   }
 }
 
 function renderSettings() {
   const c = App.church || {};
-  const color = c.brandColor || '#1E40AF';
+  const color = c.brandColor || '#1E3A8A';
+  const presets = ['#1E3A8A', '#0F172A', '#1E40AF', '#047857', '#9333EA', '#B45309', '#BE123C'];
   return `
   <div class="mb-6">
-    <h1 class="text-2xl font-semibold">Church Settings</h1>
-    <p class="text-sm text-muted mt-1">Branding, contact information and appearance.</p>
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900">Church Settings</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Customize your church identity, logo and contact details.</p>
   </div>
 
   <div class="space-y-6 max-w-3xl">
-    <section class="card p-5 sm:p-6">
-      <h2 class="text-base font-semibold">Church branding</h2>
-      <p class="text-sm text-muted mt-1">Appears across the app and at the top of every PDF.</p>
+    <section class="card p-6">
+      <h2 class="text-base font-bold text-slate-900">Church Identity &amp; Branding</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Appears on every generated PDF document and throughout the app.</p>
 
-      <div class="mt-6 flex flex-col sm:flex-row sm:items-center gap-5">
-        <div id="logo-preview" class="w-20 h-20 rounded-2xl border border-line bg-paper flex items-center justify-center overflow-hidden shrink-0">
+      <div class="mt-5 flex flex-col sm:flex-row sm:items-center gap-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
+        <div id="logo-preview" class="w-20 h-20 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm" style="width: 80px; height: 80px; min-width: 80px; min-height: 80px;">
           ${c.logo
-            ? '<img src="' + c.logo + '" alt="Church logo preview" class="w-full h-full object-contain p-1.5">'
-            : '<i data-lucide="image" class="w-6 h-6 text-muted"></i>'}
+            ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="Church logo" class="w-full h-full max-w-full max-h-full object-contain p-1.5" style="max-width: 100%; max-height: 100%;">'
+            : '<div class="text-center text-slate-400"><i data-lucide="image" class="w-7 h-7 mx-auto"></i><span class="text-[10px] block mt-0.5">No Logo</span></div>'}
         </div>
         <div class="min-w-0">
           <div class="flex flex-wrap gap-2">
-            <button class="btn btn-ghost" data-action="logo-upload"><i data-lucide="upload" class="w-4 h-4"></i>Upload Logo</button>
-            ${c.logo ? '<button class="btn btn-danger" data-action="logo-remove"><i data-lucide="trash-2" class="w-4 h-4"></i>Remove</button>' : ''}
+            <button class="btn btn-ghost text-xs" data-action="logo-upload"><i data-lucide="upload" class="w-4 h-4"></i>Upload Church Logo</button>
+            ${c.logo ? '<button class="btn btn-danger text-xs" data-action="logo-remove"><i data-lucide="trash-2" class="w-4 h-4"></i>Remove</button>' : ''}
           </div>
-          <p class="text-xs text-muted mt-2">PNG or JPG. Stored locally in your browser (IndexedDB) and placed prominently on the PDF.</p>
+          <p class="text-xs text-slate-500 mt-2">Recommended format: PNG or JPG. Stored locally in your browser and embedded directly in the PDF header.</p>
         </div>
-        <input type="file" id="logo-file" accept="image/*" class="hidden">
+        <input type="file" id="logo-file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
       </div>
 
-      <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="form-label" for="set-name">Church Name</label>
-          <input id="set-name" class="input" data-setting="name" value="${esc(c.name || '')}" maxlength="60" placeholder="Redeem Church">
+          <input id="set-name" class="input font-semibold" data-setting="name" value="${esc(c.name || '')}" maxlength="60" placeholder="Redeem Church">
         </div>
         <div>
-          <label class="form-label" for="set-tagline">Tagline <span class="text-muted font-normal">(optional)</span></label>
-          <input id="set-tagline" class="input" data-setting="tagline" value="${esc(c.tagline || '')}" maxlength="80" placeholder="e.g. A people of purpose">
+          <label class="form-label" for="set-tagline">Motto / Tagline <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input id="set-tagline" class="input" data-setting="tagline" value="${esc(c.tagline || '')}" maxlength="80" placeholder="A community anchored in grace and truth">
         </div>
       </div>
     </section>
 
-    <section class="card p-5 sm:p-6">
-      <h2 class="text-base font-semibold">Contact information</h2>
-      <p class="text-sm text-muted mt-1">Shown in the PDF footer and available for printed programs.</p>
-      <div class="mt-6 space-y-4">
+    <section class="card p-6">
+      <h2 class="text-base font-bold text-slate-900">Contact &amp; Location Details</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Shown in the PDF bulletin footer.</p>
+
+      <div class="mt-5 space-y-4">
         <div>
           <label class="form-label" for="set-address">Address</label>
           <textarea id="set-address" rows="2" class="input" data-setting="address" maxlength="140" placeholder="12 Grace Avenue, Lagos">${esc(c.address || '')}</textarea>
@@ -371,22 +439,24 @@ function renderSettings() {
       </div>
     </section>
 
-    <section class="card p-5 sm:p-6">
-      <h2 class="text-base font-semibold">Appearance</h2>
-      <p class="text-sm text-muted mt-1">The primary brand color styles the app accents, buttons and the Modern PDF theme.</p>
-      <div class="mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
-        <div class="flex gap-2 items-center">
+    <section class="card p-6">
+      <h2 class="text-base font-bold text-slate-900">Accent Color</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Styles primary buttons, accents and the modern PDF theme.</p>
+      <div class="mt-4 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex gap-2.5 items-center">
           <input type="color" id="set-color" class="color-input" value="${esc(color)}">
-          <input type="text" id="set-color-hex" class="input w-32 font-mono" value="${esc(color)}" maxlength="7" placeholder="#1E40AF">
+          <input type="text" id="set-color-hex" class="input w-32 font-mono text-xs uppercase" value="${esc(color)}" maxlength="7" placeholder="#1E3A8A">
         </div>
-        <div class="flex items-center gap-3 text-sm text-muted">
-          <span class="inline-flex items-center gap-2"><span class="w-4 h-4 rounded-md" style="background: rgb(var(--accent-rgb))"></span>Current accent</span>
+        <div class="flex flex-wrap items-center gap-2">
+          ${presets.map(hex => `
+            <button type="button" class="w-6 h-6 rounded-md border border-slate-300 transition-transform hover:scale-110 shadow-sm" style="background-color: ${hex}" data-action="quick-accent" data-hex="${hex}" title="${hex}"></button>
+          `).join('')}
         </div>
       </div>
     </section>
 
-    <div class="flex justify-end">
-      <button class="btn btn-primary" data-action="save-settings"><i data-lucide="check" class="w-4 h-4"></i>Save Changes</button>
+    <div class="flex justify-end gap-3 pt-2">
+      <button class="btn btn-primary" data-action="save-settings"><i data-lucide="check" class="w-4 h-4"></i>Save Church Settings</button>
     </div>
   </div>`;
 }
@@ -403,7 +473,16 @@ async function saveChurchSettings() {
 }
 
 function handleLogoFile(file) {
-  if (!file || !/^image\//.test(file.type)) { toast('Please choose an image file', 'info'); return; }
+  if (!file) return;
+  const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  if (!validTypes.includes(file.type)) {
+    toast('Please choose a valid PNG, JPG, WEBP, or GIF image', 'info');
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast('Logo file must be smaller than 5MB', 'error');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
@@ -414,19 +493,23 @@ function handleLogoFile(file) {
       const h = Math.max(1, Math.round(img.height * scale));
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
       App.church.logo = canvas.toDataURL('image/png');
+      App.church.logoRemoved = false;
       const preview = document.getElementById('logo-preview');
       if (preview) {
-        preview.innerHTML = '<img src="' + App.church.logo + '" alt="Church logo preview" class="w-full h-full object-contain p-1.5">';
+        preview.innerHTML = '<img src="' + esc(safeImgSrc(App.church.logo)) + '" alt="Church logo" class="w-full h-full object-contain p-1.5">';
       }
-      toast('Logo added. Remember to save.');
+      toast('Logo updated! Click Save Church Settings.');
     };
-    img.onerror = () => toast('That image could not be read', 'error');
+    img.onerror = () => toast('That image could not be loaded', 'error');
     img.src = reader.result;
   };
+  reader.onerror = () => toast('Failed to read image file', 'error');
   reader.readAsDataURL(file);
 }
+
 // ======================================
 // TEMPLATES
 // ======================================
@@ -434,63 +517,85 @@ function handleLogoFile(file) {
 function templateCardHtml(t) {
   const count = (t.items || []).length;
   return `
-  <div class="card p-5 flex flex-col">
+  <div class="card card-hover p-5 flex flex-col">
     <div class="flex items-start justify-between gap-2">
-      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0"><i data-lucide="layout-template" class="w-5 h-5"></i></div>
+      <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 border border-blue-100 flex items-center justify-center shrink-0">
+        <i data-lucide="layout-template" class="w-5 h-5"></i>
+      </div>
       <div class="flex gap-1">
-        <button class="icon-btn" data-action="open-template-editor" data-id="${t.id}" aria-label="Edit ${esc(t.name)}"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-        <button class="icon-btn" data-action="duplicate-template" data-id="${t.id}" aria-label="Duplicate ${esc(t.name)}"><i data-lucide="copy" class="w-4 h-4"></i></button>
-        <button class="icon-btn danger" data-action="delete-template" data-id="${t.id}" aria-label="Delete ${esc(t.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        <button class="icon-btn" data-action="open-template-editor" data-id="${t.id}" aria-label="Edit ${esc(t.name)}" title="Edit"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+        <button class="icon-btn" data-action="duplicate-template" data-id="${t.id}" aria-label="Duplicate ${esc(t.name)}" title="Duplicate"><i data-lucide="copy" class="w-4 h-4"></i></button>
+        <button class="icon-btn danger" data-action="delete-template" data-id="${t.id}" aria-label="Delete ${esc(t.name)}" title="Delete"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
       </div>
     </div>
     <div class="mt-4 min-w-0 flex-1">
-      <h3 class="font-semibold truncate" title="${esc(t.name)}">${esc(t.name)}</h3>
-      <p class="text-sm text-muted mt-1 line-clamp-2 min-h-[2.5rem]">${esc(t.description || 'No description')}</p>
+      <h3 class="font-bold text-slate-900 truncate" title="${esc(t.name)}">${esc(t.name)}</h3>
+      <p class="text-sm text-slate-500 mt-1 line-clamp-2 min-h-[2.5rem]">${esc(t.description || 'No description')}</p>
     </div>
-    <div class="mt-4 pt-4 border-t border-line flex items-center justify-between">
-      <span class="text-xs text-muted">${count} item${count === 1 ? '' : 's'}</span>
-      <button class="btn btn-soft" data-action="use-template" data-id="${t.id}">Use<i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+    <div class="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between">
+      <span class="text-xs text-slate-500 font-medium">${count} item${count === 1 ? '' : 's'}</span>
+      <button class="btn btn-soft text-xs py-1.5 px-3" data-action="use-template" data-id="${t.id}">
+        Plan Service <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+      </button>
     </div>
   </div>`;
 }
 
 async function renderTemplates() {
-  const templates = (await db.templates.toArray()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  let templates = (await db.templates.toArray()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  if (App.searchQuery) {
+    const q = App.searchQuery.toLowerCase();
+    templates = templates.filter(t => t.name.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q)));
+  }
+
   return `
   <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-semibold">Templates</h1>
-      <p class="text-sm text-muted mt-1">Reusable outlines for your orders of service.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Templates</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Reusable liturgies and service outlines.</p>
     </div>
     <button class="btn btn-primary" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>New Template</button>
   </div>
+
+  <div class="mb-5 flex gap-3">
+    <div class="relative flex-1 max-w-sm">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+      <input id="tpl-search-input" class="input pl-9 text-xs" placeholder="Search templates..." value="${esc(App.searchQuery || '')}">
+    </div>
+  </div>
+
+  <div id="tpl-list-container">
   ${templates.length
     ? '<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">' + templates.map(templateCardHtml).join('') + '</div>'
     : `
-    <div class="card p-10 sm:p-16 text-center">
-      <div class="w-14 h-14 rounded-2xl bg-paper mx-auto flex items-center justify-center"><i data-lucide="layout-template" class="w-7 h-7 text-muted"></i></div>
-      <h3 class="mt-4 font-semibold text-lg">No templates yet</h3>
-      <p class="text-sm text-muted mt-1 max-w-sm mx-auto">Create your first template to start planning orders of service for Sundays and special programs.</p>
-      <button class="btn btn-primary mt-6" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
-    </div>`}`;
+    <div class="card p-12 text-center max-w-xl mx-auto">
+      <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="layout-template" class="w-6 h-6"></i></div>
+      <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No templates matching "' + esc(App.searchQuery) + '"' : 'No templates created yet'}</h3>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create your first template to quickly prepare Sunday services.</p>
+      <button class="btn btn-primary mt-5 text-xs" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
+    </div>`}
+  </div>`;
 }
 
 function templateItemsHtml(items) {
   if (!items.length) {
-    return '<p class="py-10 text-center text-sm text-muted">No items yet. Add the first service item below.</p>';
+    return '<p class="py-10 text-center text-sm text-slate-400">No items yet. Click "Add Service Item" below.</p>';
   }
-  return items.map(item => `
-    <div class="tpl-item flex items-center gap-3 py-3" data-id="${item.id}">
-      <span class="drag-handle icon-btn" title="Drag to reorder"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+  return items.map((item, idx) => `
+    <div class="tpl-item flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-slate-50 transition-colors" data-id="${item.id}">
+      <span class="drag-handle icon-btn text-slate-400 hover:text-slate-700" title="Drag to reorder"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+      <span class="text-xs font-mono font-bold text-slate-400 w-5">${idx + 1}</span>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <p class="text-sm font-medium truncate">${esc(item.title)}</p>
-          ${item.requiresPerson ? '<span class="chip">Person required</span>' : '<span class="chip">No person</span>'}
+          <p class="text-sm font-semibold text-slate-900 truncate">${esc(item.title)}</p>
+          ${item.requiresPerson ? '<span class="chip chip-navy text-[10px]">Person required</span>' : '<span class="chip text-[10px]">No person</span>'}
         </div>
-        ${item.description ? '<p class="text-xs text-muted mt-0.5 line-clamp-2">' + esc(item.description) + '</p>' : ''}
+        ${item.description ? '<p class="text-xs text-slate-500 mt-0.5 line-clamp-1">' + esc(item.description) + '</p>' : ''}
       </div>
-      <button class="icon-btn" data-action="edit-item" data-id="${item.id}" aria-label="Edit item"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-      <button class="icon-btn danger" data-action="remove-item" data-id="${item.id}" aria-label="Remove item"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      <div class="flex items-center gap-1">
+        <button class="icon-btn" data-action="edit-item" data-id="${item.id}" aria-label="Edit item"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+        <button class="icon-btn danger" data-action="remove-item" data-id="${item.id}" aria-label="Remove item"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>
     </div>`).join('');
 }
 
@@ -498,38 +603,41 @@ function renderTemplateEditor() {
   const t = App.currentTemplate || { name: '', description: '', items: [] };
   return `
   <div class="mb-6 flex items-center gap-3">
-    <button class="icon-btn" data-action="back-templates" aria-label="Back to templates"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+    <button class="icon-btn bg-white border border-slate-200" data-action="back-templates" aria-label="Back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
     <div>
-      <h1 class="text-2xl font-semibold">${t.isNew ? 'Create Template' : 'Edit Template'}</h1>
-      <p class="text-sm text-muted mt-1">Drag items to reorder the flow of service.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">${t.isNew ? 'Create Template' : 'Edit Template'}</h1>
+      <p class="text-xs text-slate-500 mt-0.5">Organize items in order of execution.</p>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-    <section class="card p-5 sm:p-6">
-      <h2 class="text-base font-semibold">Template details</h2>
-      <div class="mt-5 space-y-4">
+    <section class="card p-6">
+      <h2 class="text-base font-bold text-slate-900">Template Details</h2>
+      <div class="mt-4 space-y-4">
         <div>
           <label class="form-label" for="tpl-name">Template Name</label>
-          <input id="tpl-name" class="input" value="${esc(t.name || '')}" maxlength="60" placeholder="Sunday Worship Service">
+          <input id="tpl-name" class="input font-medium" value="${esc(t.name || '')}" maxlength="60" placeholder="Sunday Worship Service">
         </div>
         <div>
           <label class="form-label" for="tpl-desc">Description</label>
-          <textarea id="tpl-desc" rows="3" class="input" maxlength="160" placeholder="Regular Sunday worship service">${esc(t.description || '')}</textarea>
+          <textarea id="tpl-desc" rows="3" class="input text-xs" maxlength="160" placeholder="Regular Sunday worship service">${esc(t.description || '')}</textarea>
         </div>
       </div>
       <button class="btn btn-primary w-full mt-6" data-action="save-template"><i data-lucide="check" class="w-4 h-4"></i>Save Template</button>
     </section>
 
-    <section class="card p-5 sm:p-6 lg:col-span-2">
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-semibold">Service items</h2>
-        <span id="tpl-item-count" class="chip">${(t.items || []).length} items</span>
+    <section class="card p-6 lg:col-span-2">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Service Items</h2>
+          <p class="text-xs text-slate-500">Drag items to rearrange the flow.</p>
+        </div>
+        <span id="tpl-item-count" class="chip chip-navy">${(t.items || []).length} items</span>
       </div>
-      <div id="tpl-items-list" class="mt-4 divide-y divide-line border-t border-b border-line rounded-xl">
+      <div id="tpl-items-list" class="mt-3 divide-y divide-slate-100">
         ${templateItemsHtml(t.items || [])}
       </div>
-      <button class="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-sm font-medium text-muted hover:border-accent hover:text-accent transition-colors" data-action="add-item">
+      <button class="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-700 hover:border-blue-900 hover:text-blue-900 transition-colors" data-action="add-item">
         <i data-lucide="plus" class="w-4 h-4"></i>Add Service Item
       </button>
     </section>
@@ -543,6 +651,7 @@ function refreshTemplateItemsList() {
   list.innerHTML = templateItemsHtml(App.currentTemplate.items);
   if (count) count.textContent = App.currentTemplate.items.length + ' items';
   refreshIcons();
+  initTemplateSortable();
 }
 
 async function openTemplateEditor(id) {
@@ -590,7 +699,7 @@ async function deleteTemplate(id) {
   if (!t) return;
   const ok = await confirmDialog({
     title: 'Delete template?',
-    text: '"' + t.name + '" and its ' + t.items.length + ' items will be removed. Services already created from it are not affected.',
+    text: '"' + t.name + '" and its ' + t.items.length + ' items will be removed.',
     confirmText: 'Delete',
   });
   if (!ok) return;
@@ -600,10 +709,10 @@ async function deleteTemplate(id) {
 }
 
 // Service item modal
-
-function openItemModal(item) {
+function openItemModal(item, mode = 'template') {
   App.editingItemId = item ? item.id : null;
-  $('#item-modal-title').textContent = item ? 'Edit Service Item' : 'Add Service Item';
+  App.itemModalMode = mode;
+  $('#item-modal-title').textContent = item ? 'Edit Service Item' : (mode === 'service' ? 'Add Item to this Sunday' : 'Add Service Item');
   $('#item-save-label').textContent = item ? 'Save Changes' : 'Add Item';
   $('#item-title').value = item ? item.title : '';
   $('#item-desc').value = item ? (item.description || '') : '';
@@ -613,12 +722,29 @@ function openItemModal(item) {
 }
 
 function saveItemFromModal() {
-  const t = App.currentTemplate;
-  if (!t) return;
   const title = String($('#item-title').value || '').trim();
   const description = String($('#item-desc').value || '').trim();
   const requiresPerson = $('#item-person').checked;
   if (!title) { toast('Please give the item a title', 'info'); return; }
+
+  if (App.itemModalMode === 'service') {
+    const s = App.currentService;
+    if (!s) return;
+    if (App.editingItemId) {
+      const it = s.items.find(i => i.id === App.editingItemId);
+      if (it) { it.title = title; it.description = description; it.requiresPerson = requiresPerson; }
+    } else {
+      s.items.push({ id: uid(), title, description, requiresPerson, person: '' });
+    }
+    closeModal('modal-item');
+    refreshServiceEditorItems();
+    refreshLivePreview();
+    toast('Sunday service updated');
+    return;
+  }
+
+  const t = App.currentTemplate;
+  if (!t) return;
   if (App.editingItemId) {
     const it = t.items.find(i => i.id === App.editingItemId);
     if (it) { it.title = title; it.description = description; it.requiresPerson = requiresPerson; }
@@ -636,7 +762,7 @@ async function removeTemplateItem(id) {
   if (!it) return;
   const ok = await confirmDialog({
     title: 'Remove item?',
-    text: '"' + it.title + '" will be removed from this template.',
+    text: '"' + it.title + '" will be removed.',
     confirmText: 'Remove',
   });
   if (!ok) return;
@@ -644,16 +770,15 @@ async function removeTemplateItem(id) {
   refreshTemplateItemsList();
 }
 
-// ======================================
-// DRAG & DROP
-// ======================================
-
 function initTemplateSortable() {
   const list = document.getElementById('tpl-items-list');
   if (!list || !window.Sortable) return;
-  new Sortable(list, {
+  if (App.sortableInstance) {
+    try { App.sortableInstance.destroy(); } catch (e) {}
+  }
+  App.sortableInstance = new Sortable(list, {
     handle: '.drag-handle',
-    animation: 180,
+    animation: 160,
     ghostClass: 'sortable-ghost',
     chosenClass: 'sortable-chosen',
     onEnd: () => {
@@ -661,22 +786,24 @@ function initTemplateSortable() {
       if (!t) return;
       const order = $$('.tpl-item', list).map(el => el.dataset.id);
       t.items.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+      refreshTemplateItemsList();
     },
   });
 }
+
 // ======================================
-// SERVICE BUILDER
+// SUNDAY SERVICE BUILDER & EDITOR
 // ======================================
 
 async function renderNewService() {
   const templates = (await db.templates.toArray()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
   if (!templates.length) {
     return `
-    <div class="card p-10 sm:p-16 text-center">
-      <div class="w-14 h-14 rounded-2xl bg-paper mx-auto flex items-center justify-center"><i data-lucide="layout-template" class="w-7 h-7 text-muted"></i></div>
-      <h3 class="mt-4 font-semibold text-lg">No templates yet</h3>
-      <p class="text-sm text-muted mt-1 max-w-sm mx-auto">You need at least one service template before creating a Sunday service.</p>
-      <button class="btn btn-primary mt-6" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
+    <div class="card p-12 text-center max-w-xl mx-auto">
+      <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="layout-template" class="w-6 h-6"></i></div>
+      <h3 class="mt-4 font-bold text-slate-800">No templates found</h3>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create a template first to start planning Sunday services.</p>
+      <button class="btn btn-primary mt-5 text-xs" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
     </div>`;
   }
   const pre = (App.preselectTemplateId && templates.some(t => t.id === App.preselectTemplateId))
@@ -685,37 +812,37 @@ async function renderNewService() {
   App.newServiceDate = null;
   return `
   <div class="mb-6 flex items-center gap-3">
-    <button class="icon-btn" data-action="nav" data-page="sundays" aria-label="Back to saved Sundays"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+    <button class="icon-btn bg-white border border-slate-200" data-action="nav" data-page="sundays" aria-label="Back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
     <div>
-      <h1 class="text-2xl font-semibold">Create Sunday Service</h1>
-      <p class="text-sm text-muted mt-1">Pick a template, set the date and theme. You will assign people next.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Create Sunday Service</h1>
+      <p class="text-xs text-slate-500 mt-0.5">Select a template, date and theme.</p>
     </div>
   </div>
 
-  <section class="card p-6 sm:p-8 max-w-2xl">
-    <div class="space-y-5">
+  <section class="card p-6 sm:p-7 max-w-2xl">
+    <div class="space-y-4">
       <div>
         <label class="form-label" for="ns-template">Service Template</label>
-        <select id="ns-template" class="input">
+        <select id="ns-template" class="input font-medium">
           ${templates.map(t => '<option value="' + t.id + '"' + (t.id === pre ? ' selected' : '') + '>' + esc(t.name) + ' (' + t.items.length + ' items)</option>').join('')}
         </select>
-        <p class="text-xs text-muted mt-1.5">The order of service will be built from this template.</p>
+        <p class="text-xs text-slate-500 mt-1">The flow of service will be initialized from this template.</p>
       </div>
       <div>
-        <label class="form-label" for="ns-date">Date</label>
-        <input id="ns-date" class="input" placeholder="Select a date" readonly>
-        <p class="text-xs text-muted mt-1.5">Defaults to the coming Sunday.</p>
+        <label class="form-label" for="ns-date">Service Date</label>
+        <input id="ns-date" class="input font-medium cursor-pointer" placeholder="Select date" readonly>
+        <p class="text-xs text-slate-500 mt-1">Defaults to the coming Sunday.</p>
       </div>
       <div>
-        <label class="form-label" for="ns-theme">Service Theme <span class="text-muted font-normal">(optional)</span></label>
-        <input id="ns-theme" class="input" maxlength="80" placeholder="Walking in God's Purpose">
+        <label class="form-label" for="ns-theme">Service Theme / Sermon Title <span class="text-slate-400 font-normal">(optional)</span></label>
+        <input id="ns-theme" class="input" maxlength="80" placeholder="e.g. Walking in Divine Favor">
       </div>
       <div>
-        <label class="form-label" for="ns-desc">Service Description <span class="text-muted font-normal">(optional)</span></label>
-        <textarea id="ns-desc" rows="3" class="input" maxlength="200" placeholder="Special notes for this service"></textarea>
+        <label class="form-label" for="ns-desc">Service Description <span class="text-slate-400 font-normal">(optional)</span></label>
+        <textarea id="ns-desc" rows="2" class="input text-xs" maxlength="200" placeholder="Special notes, scripture passages or order notes"></textarea>
       </div>
-      <div class="flex justify-end pt-2">
-        <button class="btn btn-primary" data-action="continue-new-service">Continue<i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+      <div class="flex justify-end pt-3">
+        <button class="btn btn-primary" data-action="continue-new-service">Continue to Service Editor <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
       </div>
     </div>
   </section>`;
@@ -727,7 +854,9 @@ function afterNewService() {
   const fp = flatpickr('#ns-date', {
     dateFormat: 'l, j F Y',
     defaultDate: def,
-    onChange: (dates) => { App.newServiceDate = dates[0] ? isoOf(dates[0]) : null; },
+    onChange: (dates) => { 
+      App.newServiceDate = dates[0] ? isoOf(dates[0]) : null; 
+    },
   });
   App.flatpickrs.push(fp);
   App.newServiceDate = isoOf(def);
@@ -755,108 +884,177 @@ async function continueNewService() {
   showPage('serviceEditor');
 }
 
-function serviceItemBlockHtml(it) {
+function serviceItemBlockHtml(it, idx) {
+  const safeId = esc(it.id);
   return `
-  <div class="pt-5 border-t border-line first:pt-0 first:border-t-0">
-    <div class="flex items-center justify-between gap-2 mb-2">
-      <label class="text-sm font-medium" for="person-${it.id}">${esc(it.title)}</label>
-      ${it.requiresPerson ? '' : '<span class="chip">No person required</span>'}
+  <div class="service-item-row p-3.5 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors" data-id="${safeId}">
+    <div class="flex items-center justify-between gap-2 mb-1.5">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="service-drag-handle cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-600 p-0.5" title="Drag to reorder"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+        <span class="w-4 h-4 rounded bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-mono font-bold shrink-0">${idx + 1}</span>
+        <label id="label-item-${safeId}" class="text-sm font-bold text-slate-800 truncate" for="person-${safeId}">${esc(it.title)}</label>
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        ${it.requiresPerson ? '<span class="chip chip-navy text-[10px]">Assigned</span>' : '<span class="chip text-[10px]">No person</span>'}
+        <button class="icon-btn text-xs text-slate-400 hover:text-blue-900" data-action="edit-service-item" data-id="${safeId}" title="Edit item details" aria-label="Edit ${esc(it.title)}"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+        <button class="icon-btn text-xs text-slate-400 hover:text-red-600" data-action="remove-service-item" data-id="${safeId}" title="Remove item" aria-label="Remove ${esc(it.title)}"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      </div>
     </div>
     ${it.requiresPerson
-      ? '<input id="person-' + it.id + '" class="input" data-person="' + it.id + '" value="' + esc(it.person || '') + '" maxlength="60" placeholder="Assigned to (e.g. Brother Daniel)">'
+      ? `<input id="person-${safeId}" class="input text-xs py-1.5 font-medium" data-person="${safeId}" value="${esc(it.person || '')}" maxlength="60" placeholder="Assigned to (e.g. Pastor Paul, Sister Sarah)">`
       : ''}
-    ${it.description
-      ? '<textarea class="input mt-2" rows="2" data-item-desc="' + it.id + '" maxlength="160" placeholder="Description">' + esc(it.description) + '</textarea>'
-      : ''}
+    <input class="input text-[11px] py-1 mt-1.5 text-slate-600 placeholder:text-slate-400" data-item-desc="${safeId}" maxlength="160" placeholder="Optional sub-note or description" value="${esc(it.description || '')}">
   </div>`;
+}
+
+function initServiceSortable() {
+  const container = document.getElementById('se-items-container');
+  if (!container || !window.Sortable) return;
+  if (App.serviceSortableInstance) {
+    try { App.serviceSortableInstance.destroy(); } catch (e) {}
+    App.serviceSortableInstance = null;
+  }
+  App.serviceSortableInstance = new Sortable(container, {
+    handle: '.service-drag-handle',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    onEnd: (evt) => {
+      if (!App.currentService || !Array.isArray(App.currentService.items)) return;
+      const item = App.currentService.items.splice(evt.oldIndex, 1)[0];
+      App.currentService.items.splice(evt.newIndex, 0, item);
+      refreshServiceEditorItems();
+      refreshLivePreview();
+    }
+  });
+}
+
+function refreshServiceEditorItems() {
+  const container = document.getElementById('se-items-container');
+  const countEl = document.getElementById('se-items-count');
+  if (!container || !App.currentService) return;
+  container.innerHTML = App.currentService.items.map(serviceItemBlockHtml).join('');
+  if (countEl) countEl.textContent = App.currentService.items.length + ' items';
+  refreshIcons();
+  initServiceSortable();
 }
 
 function renderServiceEditor() {
   const s = App.currentService;
   if (!s) {
     return `
-    <div class="card p-10 sm:p-16 text-center">
-      <div class="w-14 h-14 rounded-2xl bg-paper mx-auto flex items-center justify-center"><i data-lucide="calendar-days" class="w-7 h-7 text-muted"></i></div>
-      <h3 class="mt-4 font-semibold text-lg">No service in progress</h3>
-      <p class="text-sm text-muted mt-1 max-w-sm mx-auto">Start a new Sunday service or open one from Saved Sundays.</p>
-      <div class="flex justify-center gap-2 mt-6 flex-wrap">
-        <button class="btn btn-primary" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
-        <button class="btn btn-ghost" data-action="nav" data-page="sundays">Saved Sundays</button>
+    <div class="card p-12 text-center max-w-lg mx-auto">
+      <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="calendar-days" class="w-6 h-6"></i></div>
+      <h3 class="mt-4 font-bold text-slate-800">No service loaded</h3>
+      <p class="text-xs text-slate-500 mt-1">Start a new service or open one from Saved Sundays.</p>
+      <div class="flex justify-center gap-2.5 mt-5">
+        <button class="btn btn-primary text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>New Service</button>
+        <button class="btn btn-ghost text-xs" data-action="nav" data-page="sundays">Saved Sundays</button>
       </div>
     </div>`;
   }
   const themes = App.themeCache || [];
   const activeId = (App.church && App.church.activeThemeId) || '';
   return `
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+  <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-3 min-w-0">
-      <button class="icon-btn" data-action="nav" data-page="sundays" aria-label="Back to saved Sundays"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <button class="icon-btn bg-white border border-slate-200" data-action="nav" data-page="sundays" aria-label="Back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
       <div class="min-w-0">
-        <h1 class="text-2xl font-semibold truncate">${s.isNew ? 'New Sunday Service' : 'Edit Service'}</h1>
-        <p class="text-sm text-muted mt-0.5 truncate">${esc(s.templateName || '')}${s.date ? ' • ' + esc(fmtLongDate(s.date)) : ''}</p>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 truncate" id="se-header-title">${esc(s.theme || 'Sunday Order of Service')}</h1>
+        <p class="text-xs text-slate-500 truncate" id="se-header-subtitle">${esc(fmtLongDate(s.date))}${s.templateName ? ' • ' + esc(s.templateName) : ''}</p>
       </div>
     </div>
-    <div class="flex gap-2">
-      <button class="btn btn-ghost" data-action="save-service"><i data-lucide="check" class="w-4 h-4"></i>Save</button>
-      <button class="btn btn-primary btn-generate" data-action="generate-pdf"><i data-lucide="file-down" class="w-4 h-4"></i><span class="hidden sm:inline">Generate PDF</span></button>
+    <div class="flex items-center gap-2">
+      <button class="btn btn-ghost text-xs" data-action="print-live-preview"><i data-lucide="printer" class="w-4 h-4 text-slate-600"></i>Print</button>
+      <button class="btn btn-ghost text-xs" data-action="save-service"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>Save</button>
+      <button class="btn btn-primary btn-generate text-xs" data-action="generate-pdf"><i data-lucide="file-down" class="w-4 h-4"></i>Generate PDF</button>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-    <div class="space-y-6">
-      <section class="card p-5 sm:p-6">
-        <h2 class="text-base font-semibold">Service details</h2>
-        <div class="mt-5 space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="form-label" for="se-date">Date</label>
-              <input id="se-date" class="input" readonly>
-            </div>
-            <div>
-              <label class="form-label" for="se-theme">Service Theme</label>
-              <input id="se-theme" class="input" data-live="theme" value="${esc(s.theme || '')}" maxlength="80" placeholder="Walking in God's Purpose">
-            </div>
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- Left form controls (5 cols) -->
+    <div class="lg:col-span-5 space-y-4">
+      <section class="card p-5">
+        <h2 class="text-sm font-bold text-slate-900">Service Details</h2>
+        <div class="mt-3.5 space-y-3">
+          <div>
+            <label class="form-label" for="se-date">Date</label>
+            <input id="se-date" class="input text-xs font-medium cursor-pointer" readonly>
           </div>
           <div>
-            <label class="form-label" for="se-desc">Service Description <span class="text-muted font-normal">(optional)</span></label>
-            <textarea id="se-desc" rows="2" class="input" data-live="description" maxlength="200" placeholder="Special notes for this service">${esc(s.description || '')}</textarea>
+            <label class="form-label" for="se-theme">Service Theme / Title</label>
+            <input id="se-theme" class="input text-xs font-semibold" data-live="theme" value="${esc(s.theme || '')}" maxlength="80" placeholder="Walking in God's Purpose">
+          </div>
+          <div>
+            <label class="form-label" for="se-desc">Description <span class="text-slate-400 font-normal">(optional)</span></label>
+            <textarea id="se-desc" rows="2" class="input text-xs" data-live="description" maxlength="200" placeholder="Notes or instructions">${esc(s.description || '')}</textarea>
           </div>
         </div>
       </section>
 
-      <section class="card p-5 sm:p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-base font-semibold">Order of service</h2>
-          <span class="chip">${s.items.length} items</span>
+      <section class="card p-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Order of Service</h2>
+            <p class="text-[11px] text-slate-500">Assign minister or volunteer to each item.</p>
+          </div>
+          <span id="se-items-count" class="chip chip-navy">${s.items.length} items</span>
         </div>
-        <div class="mt-5 space-y-0">
+        
+        <div id="se-items-container" class="mt-3.5 space-y-2 max-h-[500px] overflow-y-auto pr-1">
           ${s.items.map(serviceItemBlockHtml).join('')}
         </div>
+
+        <button class="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 py-2.5 text-xs font-semibold text-slate-700 hover:border-blue-900 hover:text-blue-900 transition-colors" data-action="add-service-item">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Item to this Sunday
+        </button>
       </section>
     </div>
 
-    <section class="card lg:sticky lg:top-6">
-      <div class="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-line flex-wrap">
-        <div>
-          <h2 class="text-base font-semibold">Live preview</h2>
-          <p class="text-xs text-muted mt-0.5">Exactly how the PDF will look.</p>
+    <!-- Right Paper Preview (7 cols) -->
+    <div class="lg:col-span-7">
+      <section class="card">
+        <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 flex-wrap bg-slate-50/70">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-bold text-slate-800">Live Paper Preview</span>
+            <span class="chip text-[10px]">Click any text on paper to edit!</span>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-1 bg-white rounded-md border border-slate-200 px-1 py-0.5 text-xs">
+              <button class="w-5 h-5 rounded flex items-center justify-center text-slate-600 hover:bg-slate-100" data-action="zoom-preview" data-delta="-0.1" title="Zoom out">-</button>
+              <span id="zoom-level-text" class="px-1 text-[11px] text-slate-700 font-mono font-medium">${Math.round(App.previewScale * 100)}%</span>
+              <button class="w-5 h-5 rounded flex items-center justify-center text-slate-600 hover:bg-slate-100" data-action="zoom-preview" data-delta="0.1" title="Zoom in">+</button>
+            </div>
+
+            <label class="text-xs text-slate-600 flex items-center gap-1.5">
+              <span>Theme:</span>
+              <select id="se-theme-select" class="input py-1 px-2 text-xs w-36">
+                ${themes.map(t => '<option value="' + t.id + '"' + (t.id === activeId ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('')}
+              </select>
+            </label>
+          </div>
         </div>
-        <label class="text-xs text-muted flex items-center gap-2">Theme
-          <select id="se-theme-select" class="input se-theme-select">
-            ${themes.map(t => '<option value="' + t.id + '"' + (t.id === activeId ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('')}
-          </select>
-        </label>
-      </div>
-      <div class="p-4 sm:p-6 bg-paper/70 overflow-x-auto">
-        <div id="live-paper">${renderDocHtml(s, App.church, getActiveTheme())}</div>
-      </div>
-      <div class="px-5 sm:px-6 py-4 border-t border-line">
-        <button class="btn btn-primary btn-generate w-full" id="btn-generate-pdf" data-action="generate-pdf">
-          <i data-lucide="file-down" class="w-4 h-4"></i>Generate PDF
-        </button>
-        <p class="text-[11px] text-muted text-center mt-2">A4 portrait • multi-page • saved to PDF history</p>
-      </div>
-    </section>
+
+        <div class="p-5 paper-easel overflow-x-auto flex justify-center">
+          <div id="live-paper-scaler" style="transform-origin: top center; transition: transform 0.15s ease; transform: scale(${App.previewScale});">
+            <div id="live-paper" class="is-editable">${renderDocHtml(s, App.church, getActiveTheme(), true)}</div>
+          </div>
+        </div>
+
+        <div class="px-5 py-3.5 border-t border-slate-200 flex items-center justify-between gap-4 bg-slate-50/50">
+          <p class="text-xs text-slate-500 flex items-center gap-1.5">
+            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Edits in preview auto-sync to form &amp; PDF</span>
+          </p>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-primary btn-generate text-xs py-1.5 px-3.5" id="btn-generate-pdf" data-action="generate-pdf">
+              <i data-lucide="file-down" class="w-4 h-4"></i>Generate PDF
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>`;
 }
 
@@ -866,16 +1064,141 @@ function afterServiceEditor() {
     dateFormat: 'l, j F Y',
     defaultDate: App.currentService.date ? dateOf(App.currentService.date) : nextSunday(),
     onChange: (dates) => {
-      if (App.currentService && dates[0]) { App.currentService.date = isoOf(dates[0]); refreshLivePreview(); }
+      if (App.currentService && dates[0]) { 
+        App.currentService.date = isoOf(dates[0]); 
+        const sub = document.getElementById('se-header-subtitle');
+        if (sub) sub.textContent = fmtLongDate(App.currentService.date) + (App.currentService.templateName ? ' • ' + App.currentService.templateName : '');
+        refreshLivePreview(); 
+      }
     },
   });
   App.flatpickrs.push(fp);
+  bindPreviewInlineEditing();
+  initServiceSortable();
 }
 
 function refreshLivePreview() {
   const holder = document.getElementById('live-paper');
   if (!holder || !App.currentService) return;
-  holder.innerHTML = renderDocHtml(App.currentService, App.church, getActiveTheme());
+  holder.innerHTML = renderDocHtml(App.currentService, App.church, getActiveTheme(), true);
+  bindPreviewInlineEditing();
+}
+
+// Binds contenteditable input events directly from the live preview back into the state!
+function bindPreviewInlineEditing() {
+  const holder = document.getElementById('live-paper');
+  if (!holder || !App.currentService) return;
+  if (holder.dataset.inlineBound === 'true') return;
+  holder.dataset.inlineBound = 'true';
+
+  // Prevent multiline breaks on single-line paper editable titles & headers
+  holder.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target && e.target.getAttribute('contenteditable') === 'true') {
+      if (!e.target.dataset.editItemDesc) {
+        e.preventDefault();
+        e.target.blur();
+      }
+    }
+  });
+
+  // Clicking on service date on paper opens the date picker
+  holder.addEventListener('click', (e) => {
+    const dateEl = e.target.closest('[data-action="pick-preview-date"]');
+    if (dateEl) {
+      const seDate = document.getElementById('se-date');
+      if (seDate && seDate._flatpickr) seDate._flatpickr.open();
+    }
+  });
+
+  holder.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!el || !el.dataset) return;
+
+    // Service theme edited on paper
+    if (el.dataset.editTarget === 'service-theme') {
+      const text = el.innerText.trim();
+      App.currentService.theme = text;
+      const input = document.getElementById('se-theme');
+      if (input) input.value = text;
+      const head = document.getElementById('se-header-title');
+      if (head) head.textContent = text || 'Sunday Order of Service';
+      clearTimeout(holder._saveServiceTimer);
+      holder._saveServiceTimer = setTimeout(() => {
+        if (App.currentService) persistService(App.currentService);
+      }, 600);
+      return;
+    }
+
+    // Church name edited on paper
+    if (el.dataset.editTarget === 'church-name') {
+      const text = el.innerText.trim();
+      if (App.church) {
+        App.church.name = text;
+        updateBranding();
+        const inp = document.getElementById('set-name');
+        if (inp) inp.value = text;
+        clearTimeout(holder._saveChurchTimer);
+        holder._saveChurchTimer = setTimeout(() => {
+          if (App.church) db.church.put(App.church);
+        }, 600);
+      }
+      return;
+    }
+
+    // Item title edited on paper
+    if (el.dataset.editItemTitle) {
+      const id = el.dataset.editItemTitle;
+      const it = App.currentService.items.find(i => i.id === id);
+      if (it) {
+        it.title = el.innerText.trim();
+        const rowLabel = document.getElementById(`label-item-${id}`) || document.querySelector(`label[for="person-${id}"]`);
+        if (rowLabel) rowLabel.textContent = it.title;
+        clearTimeout(holder._saveServiceTimer);
+        holder._saveServiceTimer = setTimeout(() => {
+          if (App.currentService) persistService(App.currentService);
+        }, 600);
+      }
+      return;
+    }
+
+    // Item person assigned edited on paper
+    if (el.dataset.editItemPerson) {
+      const id = el.dataset.editItemPerson;
+      const it = App.currentService.items.find(i => i.id === id);
+      if (it) {
+        it.person = el.innerText.trim();
+        const input = document.getElementById(`person-${id}`);
+        if (input) input.value = it.person;
+        clearTimeout(holder._saveServiceTimer);
+        holder._saveServiceTimer = setTimeout(() => {
+          if (App.currentService) persistService(App.currentService);
+        }, 600);
+      }
+      return;
+    }
+
+    // Item description edited on paper
+    if (el.dataset.editItemDesc) {
+      const id = el.dataset.editItemDesc;
+      const it = App.currentService.items.find(i => i.id === id);
+      if (it) {
+        it.description = el.innerText.trim();
+        const input = document.querySelector(`[data-item-desc="${id}"]`);
+        if (input) input.value = it.description;
+        clearTimeout(holder._saveServiceTimer);
+        holder._saveServiceTimer = setTimeout(() => {
+          if (App.currentService) persistService(App.currentService);
+        }, 600);
+      }
+      return;
+    }
+  });
+
+  holder.addEventListener('focusout', () => {
+    if (App.currentService) {
+      persistService(App.currentService);
+    }
+  });
 }
 
 async function persistService(s) {
@@ -892,7 +1215,8 @@ async function saveService() {
   if (!s.items.length) { toast('This service has no items', 'info'); return; }
   await persistService(s);
   toast('Sunday service saved');
-  showPage('serviceEditor');
+  const titleEl = document.getElementById('se-header-title');
+  if (titleEl) titleEl.textContent = s.theme || 'Sunday Order of Service';
 }
 
 async function openSavedService(id) {
@@ -904,10 +1228,10 @@ async function openSavedService(id) {
 }
 
 // ======================================
-// LIVE PREVIEW
+// DOCUMENT ENGINE: ON-SCREEN LIVE PREVIEW
 // ======================================
 
-function renderDocHtml(service, church, theme) {
+function renderDocHtml(service, church, theme, editable = false) {
   church = church || {};
   const P = docParams(theme, church);
   const name = church.name || 'Redeem Church';
@@ -924,10 +1248,10 @@ function renderDocHtml(service, church, theme) {
       : '';
 
   const itemsHtml = (service.items || []).map(it => `
-      <div class="doc-item">
-        <div class="doc-item-title">${esc(it.title)}</div>
-        ${it.requiresPerson && it.person ? '<div class="doc-item-person">' + esc(it.person) + '</div>' : ''}
-        ${it.description ? '<div class="doc-item-desc">' + esc(it.description) + '</div>' : ''}
+      <div class="doc-item" data-item-id="${esc(it.id)}">
+        <div class="doc-item-title"${editable ? ' contenteditable="true" data-edit-item-title="' + esc(it.id) + '" title="Click to edit title"' : ''}>${esc(it.title)}</div>
+        ${it.requiresPerson ? `<div class="doc-item-person"${editable ? ' contenteditable="true" data-edit-item-person="' + esc(it.id) + '" title="Click to assign minister or volunteer"' : ''}>${esc(it.person || '')}</div>` : ''}
+        ${(it.description || editable) ? `<div class="doc-item-desc"${editable ? ' contenteditable="true" data-edit-item-desc="' + esc(it.id) + '" title="Click to edit notes / scripture"' : ''}>${esc(it.description || '')}</div>` : ''}
       </div>`).join('');
 
   let footerHtml = '';
@@ -945,13 +1269,13 @@ function renderDocHtml(service, church, theme) {
     ${chrome}
     <div class="doc-head${left ? ' left' : ''}">
       <div class="doc-logo">
-        ${church.logo ? '<img src="' + church.logo + '" alt="' + esc(name) + ' logo">' : '<div class="doc-logo-ph">' + esc(initials) + '</div>'}
+        ${church.logo ? '<img src="' + esc(safeImgSrc(church.logo)) + '" alt="' + esc(name) + ' logo">' : '<div class="doc-logo-ph">' + esc(initials) + '</div>'}
       </div>
-      <div class="doc-name">${esc(name)}</div>
+      <div class="doc-name"${editable ? ' contenteditable="true" data-edit-target="church-name" title="Click to edit church name"' : ''}>${esc(name)}</div>
       ${church.tagline ? '<div class="doc-tagline">' + esc(church.tagline) + '</div>' : ''}
       <div class="doc-sub">ORDER OF SERVICE</div>
-      ${dateTxt ? '<div class="doc-date">' + esc(dateTxt) + '</div>' : ''}
-      ${themeTxt ? '<div class="doc-theme">“' + esc(themeTxt) + '”</div>' : ''}
+      ${dateTxt ? '<div class="doc-date"' + (editable ? ' data-action="pick-preview-date" title="Click to change date"' : '') + '>' + esc(dateTxt) + '</div>' : ''}
+      ${(themeTxt || editable) ? `<div class="doc-theme doc-theme-quotes"${editable ? ' contenteditable="true" data-edit-target="service-theme" title="Click to edit theme"' : ''}>${esc(themeTxt)}</div>` : ''}
       <div class="doc-headrule${P.borderStyle === 'none' ? ' short' : ''}"></div>
     </div>
     <div class="doc-items${P.dividers ? ' has-dividers' : ''}">
@@ -960,8 +1284,9 @@ function renderDocHtml(service, church, theme) {
     ${footerHtml}
   </div>`;
 }
+
 // ======================================
-// PDF GENERATION
+// PDF GENERATION ENGINE
 // ======================================
 
 function pdfParams(theme, church) {
@@ -969,7 +1294,7 @@ function pdfParams(theme, church) {
   return {
     primary,
     primaryRgb: hexToRgb(primary),
-    secondaryRgb: hexToRgb(theme.secondary || '#737373'),
+    secondaryRgb: hexToRgb(theme.secondary || '#5C6670'),
     frameColor: mixHex(primary, '#FFFFFF', 0.55),
     hf: theme.headingFont === 'serif' ? 'times' : 'helvetica',
     bf: theme.bodyFont === 'serif' ? 'times' : 'helvetica',
@@ -982,7 +1307,6 @@ function pdfParams(theme, church) {
   };
 }
 
-// Letter-spaced text drawn character by character (precise, unit-safe)
 function spacedText(doc, txt, x, y, gapMm) {
   let cx = x;
   for (const ch of txt) {
@@ -996,7 +1320,8 @@ function spacedWidth(doc, txt, gapMm) {
   return txt.length ? w - gapMm : 0;
 }
 function textLines(doc, txt, maxWidth) {
-  return Math.max(1, Math.ceil(doc.getTextWidth(String(txt)) / maxWidth));
+  if (!txt) return 1;
+  return Math.max(1, doc.splitTextToSize(String(txt), maxWidth).length);
 }
 
 function drawPdfChrome(doc, P) {
@@ -1014,7 +1339,7 @@ function drawPdfChrome(doc, P) {
 }
 
 function drawPdfHeader(doc, P, church, service, logo) {
-  const W = 210, MX = 24, centerX = W / 2;
+  const W = 210, MX = 24, centerX = W / 2, maxW = W - 2 * MX;
   const isCenter = P.align === 'center';
   let y = 30;
 
@@ -1022,7 +1347,7 @@ function drawPdfHeader(doc, P, church, service, logo) {
     let h = 22, w = (logo.width / logo.height) * h;
     if (w > 60) { w = 60; h = (logo.height / logo.width) * w; }
     const x = isCenter ? (W - w) / 2 : MX;
-    try { doc.addImage(logo.dataUrl, logo.format, x, y, w, h); } catch (e) { /* skip bad logo */ }
+    try { doc.addImage(logo.dataUrl, logo.format, x, y, w, h); } catch (e) { /* skip */ }
     y += h + 7;
   } else {
     const size = 17;
@@ -1040,14 +1365,22 @@ function drawPdfHeader(doc, P, church, service, logo) {
   doc.setTextColor(23, 23, 23);
   const name = church.name || 'Redeem Church';
   const nameGap = 0.9;
-  if (isCenter) { const w = spacedWidth(doc, name, nameGap); spacedText(doc, name, centerX - w / 2, y, nameGap); }
-  else spacedText(doc, name, MX, y, nameGap);
+  const nameW = spacedWidth(doc, name, nameGap);
+  if (nameW > maxW) {
+    doc.setFontSize(Math.min(P.nameSize, 18));
+    if (isCenter) doc.text(name, centerX, y, { align: 'center', maxWidth: maxW });
+    else doc.text(name, MX, y, { maxWidth: maxW });
+  } else {
+    if (isCenter) spacedText(doc, name, centerX - nameW / 2, y, nameGap);
+    else spacedText(doc, name, MX, y, nameGap);
+  }
   y += 9.5;
 
   if (church.tagline) {
     doc.setFont(P.bf, 'italic'); doc.setFontSize(9.5);
     doc.setTextColor(P.secondaryRgb[0], P.secondaryRgb[1], P.secondaryRgb[2]);
-    if (isCenter) doc.text(church.tagline, centerX, y, { align: 'center' }); else doc.text(church.tagline, MX, y);
+    if (isCenter) doc.text(church.tagline, centerX, y, { align: 'center', maxWidth: maxW });
+    else doc.text(church.tagline, MX, y, { maxWidth: maxW });
     y += 6;
   }
 
@@ -1069,9 +1402,11 @@ function drawPdfHeader(doc, P, church, service, logo) {
   if (service.theme) {
     doc.setFont(P.bf, 'italic'); doc.setFontSize(12.5);
     doc.setTextColor(P.primaryRgb[0], P.primaryRgb[1], P.primaryRgb[2]);
-    const th = '"' + service.theme + '"';
-    if (isCenter) doc.text(th, centerX, y, { align: 'center' }); else doc.text(th, MX, y);
-    y += 7;
+    const cleanTheme = String(service.theme).replace(/^["“”]|["“”]$/g, '').trim();
+    const th = '“' + cleanTheme + '”';
+    const thLines = doc.splitTextToSize(th, 160);
+    if (isCenter) doc.text(thLines, centerX, y, { align: 'center' }); else doc.text(thLines, MX, y);
+    y += 6.5 * thLines.length;
   }
 
   doc.setDrawColor(224, 224, 220);
@@ -1099,42 +1434,50 @@ function pdfItemHeight(doc, it, P) {
   let h = 5.6;
   if (it.requiresPerson && it.person) {
     doc.setFont(P.bf, 'normal'); doc.setFontSize(11);
-    h += 4.9 * textLines(doc, it.person, 150);
+    const lines = doc.splitTextToSize(String(it.person), 150);
+    h += 4.9 * Math.max(1, lines.length);
   }
   if (it.description) {
     doc.setFont(P.bf, 'italic'); doc.setFontSize(9);
-    h += 4.0 * textLines(doc, it.description, 140);
+    const lines = doc.splitTextToSize(String(it.description), 140);
+    h += 4.0 * Math.max(1, lines.length);
   }
   return h + P.gap;
 }
 
 function drawPdfItem(doc, it, y, P) {
-  const W = 210, MX = 24, centerX = W / 2;
+  const W = 210, MX = 24, centerX = W / 2, maxW = W - 2 * MX;
   const isCenter = P.align === 'center';
 
   doc.setFont(P.hf, 'bold'); doc.setFontSize(9.5);
   doc.setTextColor(P.primaryRgb[0], P.primaryRgb[1], P.primaryRgb[2]);
   const title = String(it.title || '').toUpperCase();
   const tGap = 1.15;
-  if (isCenter) { const w = spacedWidth(doc, title, tGap); spacedText(doc, title, centerX - w / 2, y, tGap); }
-  else spacedText(doc, title, MX, y, tGap);
+  const tWidth = spacedWidth(doc, title, tGap);
+  if (tWidth > maxW) {
+    if (isCenter) doc.text(title, centerX, y, { align: 'center', maxWidth: maxW });
+    else doc.text(title, MX, y, { maxWidth: maxW });
+  } else {
+    if (isCenter) spacedText(doc, title, centerX - tWidth / 2, y, tGap);
+    else spacedText(doc, title, MX, y, tGap);
+  }
   y += 5.6;
 
   if (it.requiresPerson && it.person) {
     doc.setFont(P.bf, 'normal'); doc.setFontSize(11); doc.setTextColor(38, 38, 38);
-    if (isCenter) doc.text(String(it.person), centerX, y, { align: 'center', maxWidth: 162 });
-    else doc.text(String(it.person), MX, y, { maxWidth: 162 });
-    doc.setFont(P.bf, 'normal'); doc.setFontSize(11);
-    y += 4.9 * textLines(doc, it.person, 150);
+    const pLines = doc.splitTextToSize(String(it.person), 150);
+    if (isCenter) doc.text(pLines, centerX, y, { align: 'center' });
+    else doc.text(pLines, MX, y);
+    y += 4.9 * pLines.length;
   }
 
   if (it.description) {
     doc.setFont(P.bf, 'italic'); doc.setFontSize(9);
     doc.setTextColor(P.secondaryRgb[0], P.secondaryRgb[1], P.secondaryRgb[2]);
-    if (isCenter) doc.text(String(it.description), centerX, y, { align: 'center', maxWidth: 150 });
-    else doc.text(String(it.description), MX, y, { maxWidth: 150 });
-    doc.setFont(P.bf, 'italic'); doc.setFontSize(9);
-    y += 4.0 * textLines(doc, it.description, 140);
+    const dLines = doc.splitTextToSize(String(it.description), 140);
+    if (isCenter) doc.text(dLines, centerX, y, { align: 'center' });
+    else doc.text(dLines, MX, y);
+    y += 4.0 * dLines.length;
   }
   return y;
 }
@@ -1172,10 +1515,20 @@ async function generateServicePdf(service, church, theme) {
   if (church.logo) {
     try {
       const img = await loadImage(church.logo);
+      let dataUrl = church.logo;
+      if (typeof dataUrl === 'string' && !dataUrl.startsWith('data:')) {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        dataUrl = c.toDataURL('image/png');
+      }
       logo = {
-        dataUrl: church.logo,
-        width: img.width, height: img.height,
-        format: String(church.logo).indexOf('image/png') === 5 || String(church.logo).indexOf('image/png') > -1 ? 'PNG' : 'JPEG',
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        format: 'PNG',
       };
     } catch (e) { logo = null; }
   }
@@ -1219,7 +1572,7 @@ function brandingSnapshot(church) {
   return {
     name: church.name, tagline: church.tagline || '', address: church.address || '',
     phone: church.phone || '', email: church.email || '', website: church.website || '',
-    brandColor: church.brandColor || '#1E40AF', logo: church.logo || null,
+    brandColor: church.brandColor || '#1E3A8A', logo: church.logo || null,
     activeThemeId: church.activeThemeId || null,
   };
 }
@@ -1244,7 +1597,7 @@ async function producePdf(service) {
     fileName,
     thumbnail,
   });
-  toast('PDF generated and saved to history');
+  toast('PDF exported and saved to history');
 }
 
 async function generateAndLogPdf() {
@@ -1279,7 +1632,7 @@ function setPdfBusy(busy) {
   const main = document.getElementById('btn-generate-pdf');
   if (main) {
     main.innerHTML = busy
-      ? '<span class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white spin"></span>Preparing PDF'
+      ? '<span class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white spin"></span>Generating PDF...'
       : '<i data-lucide="file-down" class="w-4 h-4"></i>Generate PDF';
   }
   refreshIcons();
@@ -1289,67 +1642,98 @@ async function captureThumbnail(service, church, theme) {
   if (!window.html2canvas) return null;
   const holder = document.createElement('div');
   holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:620px;pointer-events:none;';
-  holder.innerHTML = renderDocHtml(service, church, theme);
+  holder.innerHTML = renderDocHtml(service, church, theme, false);
   document.body.appendChild(holder);
   try {
     const paper = holder.firstElementChild;
-    if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
-    const logoImg = paper.querySelector('img');
-    if (logoImg && !logoImg.complete) await new Promise(r => { logoImg.onload = logoImg.onerror = r; });
+    if (document.fonts && document.fonts.ready) {
+      try {
+        await Promise.race([
+          document.fonts.ready,
+          new Promise(r => setTimeout(r, 1200))
+        ]);
+      } catch (e) {}
+    }
+    const logoImg = paper ? paper.querySelector('img') : null;
+    if (logoImg && !logoImg.complete) {
+      await Promise.race([
+        new Promise(r => { logoImg.onload = logoImg.onerror = r; }),
+        new Promise(r => setTimeout(r, 1500))
+      ]);
+    }
     const canvas = await html2canvas(paper, {
       scale: 240 / 620,
       backgroundColor: '#FFFFFF',
       logging: false,
       useCORS: true,
     });
-    return canvas.toDataURL('image/jpeg', 0.72);
+    return canvas.toDataURL('image/jpeg', 0.75);
   } finally {
-    document.body.removeChild(holder);
+    if (holder.parentNode) holder.parentNode.removeChild(holder);
   }
 }
+
 // ======================================
 // PDF HISTORY
 // ======================================
 
 async function renderHistory() {
-  const records = (await db.pdfHistory.toArray())
+  let records = (await db.pdfHistory.toArray())
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  if (App.searchQuery) {
+    const q = App.searchQuery.toLowerCase();
+    records = records.filter(r => (r.service && r.service.theme && r.service.theme.toLowerCase().includes(q)) || (r.date && r.date.includes(q)) || (r.fileName && r.fileName.toLowerCase().includes(q)));
+  }
+
   return `
-  <div class="mb-6">
-    <h1 class="text-2xl font-semibold">PDF History</h1>
-    <p class="text-sm text-muted mt-1">Every generated document, ready to preview or download again.</p>
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">PDF History</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Archive of all generated orders of service.</p>
+    </div>
   </div>
+
+  <div class="mb-5 flex gap-3">
+    <div class="relative flex-1 max-w-sm">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+      <input id="history-search-input" class="input pl-9 text-xs" placeholder="Search by date or theme..." value="${esc(App.searchQuery || '')}">
+    </div>
+  </div>
+
+  <div id="history-list-container">
   ${records.length
-    ? '<div class="space-y-4 max-w-4xl">' + records.map(historyCardHtml).join('') + '</div>'
+    ? '<div class="space-y-3.5 max-w-4xl">' + records.map(historyCardHtml).join('') + '</div>'
     : `
-    <div class="card p-10 sm:p-16 text-center max-w-2xl">
-      <div class="w-14 h-14 rounded-2xl bg-paper mx-auto flex items-center justify-center"><i data-lucide="history" class="w-7 h-7 text-muted"></i></div>
-      <h3 class="mt-4 font-semibold text-lg">No PDFs yet</h3>
-      <p class="text-sm text-muted mt-1 max-w-sm mx-auto">Generate your first order of service PDF and it will be saved here automatically.</p>
-      <button class="btn btn-primary mt-6" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
-    </div>`}`;
+    <div class="card p-12 text-center max-w-2xl mx-auto">
+      <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+      <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No PDFs match search' : 'No PDFs generated yet'}</h3>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Generate your first order of service PDF to automatically save a snapshot here.</p>
+      <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+    </div>`}
+  </div>`;
 }
 
 function historyCardHtml(rec) {
   const itemCount = (rec.service && rec.service.items || []).length;
   const themeTxt = rec.service && rec.service.theme ? ' — "' + esc(rec.service.theme) + '"' : '';
   return `
-  <div class="card p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:gap-5">
-    <div class="w-full sm:w-28 shrink-0">
-      <div class="thumb-box">
+  <div class="card card-hover p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:gap-5 items-stretch sm:items-center">
+    <div class="w-full sm:w-24 shrink-0">
+      <div class="thumb-box cursor-pointer" data-action="preview-history" data-id="${rec.id}">
         ${rec.thumbnail
-          ? '<img src="' + rec.thumbnail + '" alt="PDF thumbnail">'
-          : '<div class="w-full h-full flex items-center justify-center"><i data-lucide="file-text" class="w-6 h-6 text-muted"></i></div>'}
+          ? '<img src="' + esc(safeImgSrc(rec.thumbnail)) + '" alt="PDF thumbnail">'
+          : '<div class="w-full h-full flex items-center justify-center text-slate-400"><i data-lucide="file-text" class="w-6 h-6"></i></div>'}
       </div>
     </div>
-    <div class="flex-1 min-w-0 self-center">
-      <p class="font-medium">Order of Service</p>
-      <p class="text-sm text-muted mt-0.5 truncate">${esc(fmtLongDate(rec.date))}${themeTxt}</p>
-      <p class="text-xs text-muted mt-1">Created ${timeAgo(rec.createdAt)} • ${itemCount} items</p>
+    <div class="flex-1 min-w-0">
+      <p class="font-bold text-sm text-slate-900 truncate">${esc(fmtLongDate(rec.date))}${themeTxt}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Created ${timeAgo(rec.createdAt)} • ${itemCount} items</p>
+      <p class="text-[11px] text-slate-400 font-mono mt-1">${rec.fileName || 'document.pdf'}</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap shrink-0">
-      <button class="btn btn-soft" data-action="preview-history" data-id="${rec.id}"><i data-lucide="eye" class="w-4 h-4"></i>Preview</button>
-      <button class="btn btn-ghost" data-action="download-history" data-id="${rec.id}"><i data-lucide="download" class="w-4 h-4"></i>Download</button>
+      <button class="btn btn-soft text-xs py-1.5 px-3" data-action="preview-history" data-id="${rec.id}"><i data-lucide="eye" class="w-3.5 h-3.5"></i>Preview</button>
+      <button class="btn btn-ghost text-xs py-1.5 px-3" data-action="download-history" data-id="${rec.id}"><i data-lucide="download" class="w-3.5 h-3.5"></i>Download</button>
       <button class="icon-btn danger" data-action="delete-history" data-id="${rec.id}" aria-label="Delete record"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
     </div>
   </div>`;
@@ -1359,10 +1743,11 @@ async function previewHistoryRecord(id) {
   const rec = await db.pdfHistory.get(id);
   if (!rec) { toast('Record not found', 'error'); return; }
   App.pdfPreviewId = id;
-  $('#pdf-modal-title').textContent = 'Order of Service';
-  $('#pdf-modal-subtitle').textContent = fmtLongDate(rec.date) + ' • Created ' + timeAgo(rec.createdAt);
-  $('#pdf-modal-body').innerHTML = renderDocHtml(rec.service || {}, rec.church || {}, rec.theme || THEME_PRESETS[0]);
+  $('#pdf-modal-title').textContent = 'Order of Service — ' + fmtLongDate(rec.date);
+  $('#pdf-modal-subtitle').textContent = 'Created ' + timeAgo(rec.createdAt) + ' • ' + (rec.fileName || 'document.pdf');
+  $('#pdf-modal-body').innerHTML = renderDocHtml(rec.service || {}, rec.church || {}, rec.theme || THEME_PRESETS[0], false);
   openModal('modal-pdf');
+  refreshIcons();
 }
 
 async function downloadHistoryPdf(id) {
@@ -1383,7 +1768,7 @@ async function deleteHistoryRecord(id) {
   if (!rec) return;
   const ok = await confirmDialog({
     title: 'Delete this record?',
-    text: 'The history entry will be removed. The saved Sunday service itself is not affected.',
+    text: 'This record will be removed from history.',
     confirmText: 'Delete',
   });
   if (!ok) return;
@@ -1398,44 +1783,63 @@ async function deleteHistoryRecord(id) {
 // ======================================
 
 async function renderSundays() {
-  const services = (await db.services.toArray())
+  let services = (await db.services.toArray())
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+  if (App.searchQuery) {
+    const q = App.searchQuery.toLowerCase();
+    services = services.filter(s => (s.theme && s.theme.toLowerCase().includes(q)) || (s.templateName && s.templateName.toLowerCase().includes(q)) || (s.date && s.date.includes(q)));
+  }
+
   return `
   <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-semibold">Saved Sundays</h1>
-      <p class="text-sm text-muted mt-1">Open a service to keep editing or regenerate its PDF.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Saved Sundays</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Edit or export upcoming and past services.</p>
     </div>
     <button class="btn btn-primary" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>New Sunday Service</button>
   </div>
+
+  <div class="mb-5 flex gap-3">
+    <div class="relative flex-1 max-w-sm">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+      <input id="sundays-search-input" class="input pl-9 text-xs" placeholder="Search by date, theme or template..." value="${esc(App.searchQuery || '')}">
+    </div>
+  </div>
+
+  <div id="sundays-list-container">
   ${services.length
-    ? '<div class="card max-w-4xl">' + services.map(sundayRowHtml).join('') + '</div>'
+    ? '<div class="card max-w-4xl divide-y divide-slate-100">' + services.map(sundayRowHtml).join('') + '</div>'
     : `
-    <div class="card p-10 sm:p-16 text-center max-w-2xl">
-      <div class="w-14 h-14 rounded-2xl bg-paper mx-auto flex items-center justify-center"><i data-lucide="calendar-days" class="w-7 h-7 text-muted"></i></div>
-      <h3 class="mt-4 font-semibold text-lg">No saved Sundays yet</h3>
-      <p class="text-sm text-muted mt-1 max-w-sm mx-auto">Create a Sunday service, assign people to items and save it here for future editing.</p>
-      <button class="btn btn-primary mt-6" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
-    </div>`}`;
+    <div class="card p-12 text-center max-w-2xl mx-auto">
+      <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="calendar-days" class="w-6 h-6"></i></div>
+      <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No services found' : 'No saved Sundays yet'}</h3>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create a Sunday service, assign ministers, and save it here.</p>
+      <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+    </div>`}
+  </div>`;
 }
 
 function sundayRowHtml(s) {
   const md = fmtMonthDay(s.date);
-  const title = s.theme || s.templateName || 'Untitled service';
+  const title = s.theme || s.templateName || 'Sunday Worship Service';
   return `
-  <div class="flex flex-col sm:flex-row sm:items-center gap-4 px-5 sm:px-6 py-4 border-b border-line last:border-b-0">
-    <div class="w-11 h-11 rounded-xl bg-accent/10 text-accent flex flex-col items-center justify-center shrink-0 leading-none">
-      <span class="text-[10px] font-semibold">${esc(md.month)}</span>
-      <span class="text-base font-semibold mt-0.5">${esc(md.day)}</span>
+  <div class="flex flex-col sm:flex-row sm:items-center gap-4 px-5 sm:px-6 py-4 hover:bg-slate-50/70 transition-colors">
+    <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-900 border border-blue-100 flex flex-col items-center justify-center shrink-0 leading-none">
+      <span class="text-[10px] font-bold tracking-wider">${esc(md.month)}</span>
+      <span class="text-base font-extrabold mt-0.5">${esc(md.day)}</span>
     </div>
     <div class="flex-1 min-w-0">
-      <p class="font-medium truncate">${esc(title)}</p>
-      <p class="text-sm text-muted mt-0.5 truncate">${esc(fmtLongDate(s.date))}${s.templateName ? ' • ' + esc(s.templateName) : ''}</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <p class="font-bold text-sm text-slate-900 truncate">${esc(title)}</p>
+        <span class="chip text-[10px]">${s.items ? s.items.length : 0} items</span>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5 truncate">${esc(fmtLongDate(s.date))}${s.templateName ? ' • ' + esc(s.templateName) : ''}</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
-      <button class="btn btn-soft" data-action="open-service" data-id="${s.id}">Open</button>
-      <button class="icon-btn" data-action="download-service-pdf" data-id="${s.id}" aria-label="Download PDF" title="Download PDF"><i data-lucide="file-down" class="w-4 h-4"></i></button>
-      <button class="icon-btn danger" data-action="delete-service" data-id="${s.id}" aria-label="Delete service"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      <button class="btn btn-soft text-xs py-1.5 px-3" data-action="open-service" data-id="${s.id}"><i data-lucide="pencil" class="w-3.5 h-3.5"></i>Open Editor</button>
+      <button class="icon-btn" data-action="download-service-pdf" data-id="${s.id}" aria-label="Download PDF" title="Generate PDF"><i data-lucide="file-down" class="w-4 h-4"></i></button>
+      <button class="icon-btn danger" data-action="delete-service" data-id="${s.id}" aria-label="Delete service" title="Delete"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
     </div>
   </div>`;
 }
@@ -1444,8 +1848,8 @@ async function deleteSavedService(id) {
   const s = await db.services.get(id);
   if (!s) return;
   const ok = await confirmDialog({
-    title: 'Delete this Sunday?',
-    text: '"' + (s.theme || s.templateName || 'This service') + '" (' + fmtLongDate(s.date) + ') will be removed. PDF history is kept.',
+    title: 'Delete this service?',
+    text: '"' + (s.theme || s.templateName || 'This service') + '" will be deleted.',
     confirmText: 'Delete',
   });
   if (!ok) return;
@@ -1460,99 +1864,193 @@ async function deleteSavedService(id) {
 // ======================================
 
 async function renderDashboard() {
-  const [templates, services, historyCount, themesCount] = await Promise.all([
-    db.templates.count(), db.services.count(), db.pdfHistory.count(), db.themes.count(),
+  const [templatesCount, servicesCount, historyCount, themesCount, allServices, allTemplates] = await Promise.all([
+    db.templates.count(),
+    db.services.count(),
+    db.pdfHistory.count(),
+    db.themes.count(),
+    db.services.toArray(),
+    db.templates.toArray(),
   ]);
-  const recent = (await db.services.toArray())
-    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
-    .slice(0, 5);
+
+  const sortedServices = allServices.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  const recent = sortedServices.slice(0, 5);
+  const todayIso = isoOf(new Date());
+  
+  // Find upcoming service (nearest service on or after today, or latest planned)
+  const upcomingServices = sortedServices.filter(s => s.date && s.date >= todayIso).sort((a, b) => a.date.localeCompare(b.date));
+  const nextService = upcomingServices[0] || sortedServices[0] || null;
+
+  const churchName = (App.church && App.church.name) || 'Redeem Church';
+  const churchInitials = initialsOf(churchName);
+  const activeTheme = getActiveTheme();
+  const nextSun = fmtLongDate(isoOf(nextSunday()));
 
   const stats = [
-    { label: 'Templates', value: templates, icon: 'layout-template', page: 'templates' },
-    { label: 'Saved Sundays', value: services, icon: 'calendar-days', page: 'sundays' },
-    { label: 'PDF Documents', value: historyCount, icon: 'file-text', page: 'history' },
-    { label: 'Themes', value: themesCount, icon: 'palette', page: 'themes' },
+    { label: 'Saved Sundays', value: servicesCount, icon: 'calendar-days', page: 'sundays', note: 'Planned liturgies' },
+    { label: 'Templates', value: templatesCount, icon: 'layout-template', page: 'templates', note: 'Service blueprints' },
+    { label: 'PDF Documents', value: historyCount, icon: 'file-text', page: 'history', note: 'Exported prints' },
+    { label: 'Active Theme', value: activeTheme.name || 'Classic Liturgy', icon: 'palette', page: 'themes', note: 'Document style', isText: true },
   ];
 
   return `
-  <div class="mb-6">
-    <p class="text-sm text-muted">${greeting()},</p>
-    <h1 class="text-2xl font-semibold mt-1">${esc((App.church && App.church.name) || 'Redeem Church')}</h1>
-    <p class="text-sm text-muted mt-1">Create and manage your order of service.</p>
+  <!-- Top Church Hub Header -->
+  <div class="card p-5 sm:p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div class="flex items-center gap-4 min-w-0">
+        <div class="dashboard-logo-box rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm" style="width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; flex-shrink: 0; overflow: hidden;">
+          ${App.church && App.church.logo ? `<img src="${esc(safeImgSrc(App.church.logo))}" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">` : `<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">`}
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 truncate">
+              ${esc(churchName)}
+            </h1>
+            <span class="chip chip-navy text-[10px] font-semibold">Liturgical Studio</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1 truncate">
+            ${esc((App.church && App.church.tagline) || 'Weekly order of service planner & vector print publisher')}
+          </p>
+          <div class="flex items-center gap-2 mt-2 text-[11px] text-slate-500">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-900"></i>
+            <span>Next Sunday: <strong class="text-slate-800 font-semibold">${esc(nextSun)}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+        <button class="btn btn-primary text-xs py-2 px-3.5 shadow-sm" data-action="nav" data-page="newService">
+          <i data-lucide="calendar-plus" class="w-4 h-4"></i>Plan This Sunday
+        </button>
+        <button class="btn btn-ghost text-xs py-2 px-3 border border-slate-200" data-action="nav" data-page="templates">
+          <i data-lucide="layout-template" class="w-4 h-4 text-slate-500"></i>Templates
+        </button>
+      </div>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-    <button class="card p-5 text-left hover:border-accent transition-colors group" data-action="nav" data-page="newService">
-      <div class="flex items-center gap-4">
-        <div class="w-11 h-11 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0"><i data-lucide="calendar-plus" class="w-5 h-5"></i></div>
-        <div class="min-w-0">
-          <p class="font-semibold">Create Sunday Service</p>
-          <p class="text-sm text-muted mt-0.5">Start from a template and assign people.</p>
+  <!-- Next Sunday Spotlight Hero -->
+  ${nextService ? `
+  <div class="card p-5 mb-6 border-l-4 border-l-blue-900 bg-white">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div class="flex items-start sm:items-center gap-3.5 min-w-0">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-900 border border-blue-100 flex flex-col items-center justify-center shrink-0 leading-none">
+          <span class="text-[9px] font-bold uppercase tracking-wider">${esc(fmtMonthDay(nextService.date).month)}</span>
+          <span class="text-base font-extrabold mt-0.5">${esc(fmtMonthDay(nextService.date).day)}</span>
         </div>
-        <i data-lucide="arrow-right" class="w-4 h-4 text-muted ml-auto shrink-0 group-hover:text-accent"></i>
-      </div>
-    </button>
-    <button class="card p-5 text-left hover:border-accent transition-colors group" data-action="open-template-editor">
-      <div class="flex items-center gap-4">
-        <div class="w-11 h-11 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0"><i data-lucide="layout-template" class="w-5 h-5"></i></div>
         <div class="min-w-0">
-          <p class="font-semibold">Create Template</p>
-          <p class="text-sm text-muted mt-0.5">Design a reusable order of service.</p>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="chip text-[10px] font-bold uppercase tracking-wider">Upcoming Service</span>
+            <span class="text-xs text-slate-500 font-medium">${esc(fmtLongDate(nextService.date))}</span>
+          </div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 truncate mt-0.5">
+            ${esc(nextService.theme || nextService.templateName || 'Sunday Worship Service')}
+          </h2>
+          <p class="text-xs text-slate-500 truncate mt-0.5">
+            ${(nextService.items || []).length} liturgy items planned${nextService.templateName ? ' • ' + esc(nextService.templateName) : ''}
+          </p>
         </div>
-        <i data-lucide="arrow-right" class="w-4 h-4 text-muted ml-auto shrink-0 group-hover:text-accent"></i>
       </div>
-    </button>
-  </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button class="btn btn-primary text-xs py-1.5 px-3.5" data-action="open-service" data-id="${nextService.id}">
+          <i data-lucide="file-edit" class="w-4 h-4"></i>Open Live Editor &amp; Paper
+        </button>
+        <button class="btn btn-ghost text-xs py-1.5 px-3 border border-slate-200" data-action="download-service-pdf" data-id="${nextService.id}">
+          <i data-lucide="file-down" class="w-4 h-4 text-slate-600"></i>PDF
+        </button>
+      </div>
+    </div>
+  </div>` : ''}
 
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-6">
     ${stats.map(st => `
-    <button class="card p-5 text-left hover:border-accent transition-colors" data-action="nav" data-page="${st.page}">
+    <button class="card p-4 sm:p-4.5 text-left card-hover cursor-pointer" data-action="nav" data-page="${st.page}">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-medium text-muted uppercase tracking-wide">${st.label}</span>
-        <i data-lucide="${st.icon}" class="w-4 h-4 text-muted"></i>
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate">${st.label}</span>
+        <div class="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200/60 flex items-center justify-center text-slate-600 shrink-0">
+          <i data-lucide="${st.icon}" class="w-4 h-4"></i>
+        </div>
       </div>
-      <p class="text-3xl font-semibold mt-2">${st.value}</p>
+      <p class="${st.isText ? 'text-sm sm:text-base font-bold truncate mt-2 text-blue-900' : 'text-2xl font-bold mt-1.5 text-slate-900'}">${st.value}</p>
+      <p class="text-[11px] text-slate-500 mt-0.5 truncate">${st.note}</p>
     </button>`).join('')}
   </div>
 
-  <section class="card mt-6">
-    <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-line">
-      <h2 class="text-base font-semibold">Recent services</h2>
-      <button class="btn btn-ghost py-2 px-3 text-xs" data-action="nav" data-page="sundays">View all</button>
+  <!-- Quick Liturgy Templates Strip -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-3 px-1">
+      <div>
+        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Fast Start from Template</h2>
+      </div>
+      <button class="text-xs font-semibold text-blue-900 hover:underline flex items-center gap-1" data-action="nav" data-page="templates">
+        <span>Browse all blueprints</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      ${allTemplates.slice(0, 3).map(t => `
+      <div class="card card-hover p-4 cursor-pointer group flex flex-col justify-between" data-action="use-template" data-id="${t.id}">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="chip text-[10px]">${(t.items || []).length} items</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform"></i>
+          </div>
+          <h3 class="font-bold text-sm text-slate-900 mt-2.5 group-hover:text-blue-900 transition-colors truncate">${esc(t.name)}</h3>
+          <p class="text-xs text-slate-500 mt-1 line-clamp-2">${esc(t.description || 'Standard weekly liturgy')}</p>
+        </div>
+        <div class="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-xs font-semibold text-blue-900">
+          <span>Use for Sunday</span>
+          <i data-lucide="arrow-right" class="w-3 h-3"></i>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Recent Services -->
+  <section class="card">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+      <div>
+        <h2 class="text-sm font-bold text-slate-900">Recent Planned Services</h2>
+        <p class="text-[11px] text-slate-500">Access and edit your recent Sunday programs.</p>
+      </div>
+      <button class="btn btn-ghost py-1 px-2.5 text-xs border border-slate-200" data-action="nav" data-page="sundays">View All</button>
     </div>
     ${recent.length ? recent.map(s => {
       const md = fmtMonthDay(s.date);
       return `
-      <div class="flex flex-col sm:flex-row sm:items-center gap-4 px-5 sm:px-6 py-4 border-b border-line last:border-b-0">
-        <div class="w-11 h-11 rounded-xl bg-accent/10 text-accent flex flex-col items-center justify-center shrink-0 leading-none">
-          <span class="text-[10px] font-semibold">${esc(md.month)}</span>
-          <span class="text-base font-semibold mt-0.5">${esc(md.day)}</span>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-3.5 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70 transition-colors">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-900 border border-blue-100 flex flex-col items-center justify-center shrink-0 leading-none">
+          <span class="text-[9px] font-bold tracking-wider">${esc(md.month)}</span>
+          <span class="text-sm font-extrabold mt-0.5">${esc(md.day)}</span>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-medium truncate">${esc(s.theme || s.templateName || 'Untitled service')}</p>
-          <p class="text-sm text-muted mt-0.5 truncate">${esc(fmtLongDate(s.date))}${s.templateName ? ' • ' + esc(s.templateName) : ''}</p>
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="font-bold text-sm text-slate-900 truncate">${esc(s.theme || s.templateName || 'Sunday Service')}</p>
+            <span class="chip text-[10px]">${(s.items || []).length} items</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5 truncate">${esc(fmtLongDate(s.date))}${s.templateName ? ' • ' + esc(s.templateName) : ''}</p>
         </div>
         <div class="flex gap-2 shrink-0">
-          <button class="btn btn-soft py-2 px-3 text-xs" data-action="open-service" data-id="${s.id}">View</button>
-          <button class="btn btn-ghost py-2 px-3 text-xs" data-action="download-service-pdf" data-id="${s.id}">Download</button>
+          <button class="btn btn-soft py-1 px-3 text-xs" data-action="open-service" data-id="${s.id}">Edit</button>
+          <button class="btn btn-ghost py-1 px-3 text-xs border border-slate-200" data-action="download-service-pdf" data-id="${s.id}"><i data-lucide="file-down" class="w-3.5 h-3.5 text-slate-600"></i>PDF</button>
         </div>
       </div>`;
     }).join('') : `
-      <div class="px-5 sm:px-6 py-10 text-center">
-        <div class="w-12 h-12 rounded-2xl bg-paper mx-auto flex items-center justify-center"><i data-lucide="church" class="w-6 h-6 text-muted"></i></div>
-        <p class="font-medium mt-3">No services yet</p>
-        <p class="text-sm text-muted mt-1">Create your first Sunday service to see it here.</p>
-        <button class="btn btn-primary mt-5" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+      <div class="px-5 py-10 text-center">
+        <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center"><i data-lucide="church" class="w-6 h-6"></i></div>
+        <p class="font-bold text-slate-800 mt-2 text-sm">No services planned yet</p>
+        <p class="text-xs text-slate-500 mt-0.5">Start by creating your first Sunday service.</p>
+        <button class="btn btn-primary mt-4 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Plan Sunday Service</button>
       </div>`}
   </section>`;
 }
+
 // ======================================
 // THEMES
 // ======================================
 
 function miniPaperHtml(theme, church) {
   const primary = themePrimary(theme, church);
-  const hf = theme.headingFont === 'serif' ? "'Playfair Display', Georgia, serif" : "'Inter', sans-serif";
+  const hf = theme.headingFont === 'serif' ? "'Playfair Display', Georgia, serif" : "'Plus Jakarta Sans', sans-serif";
   const bf = theme.bodyFont === 'serif' ? "'Lora', Georgia, serif" : "'Inter', sans-serif";
   const chrome = theme.borderStyle === 'double'
     ? '<div class="pm-frame"></div>'
@@ -1577,19 +2075,19 @@ function miniPaperHtml(theme, church) {
 function themeCardHtml(theme, church, activeId) {
   const active = theme.id === activeId;
   return `
-  <div class="card p-4 sm:p-5 relative cursor-pointer transition-colors ${active ? 'border-accent' : 'hover:border-accent/60'}" data-action="set-theme" data-id="${theme.id}" title="Set as active theme">
+  <div class="card p-4 relative cursor-pointer transition-all ${active ? 'border-blue-900 shadow-md ring-1 ring-blue-900' : 'hover:border-slate-300'}" data-action="set-theme" data-id="${theme.id}" title="Activate theme">
     <div class="pt-1">${miniPaperHtml(theme, church)}</div>
-    <div class="mt-4 flex items-start justify-between gap-2">
+    <div class="mt-3.5 flex items-start justify-between gap-2">
       <div class="min-w-0">
-        <p class="font-semibold truncate">${esc(theme.name)}</p>
-        <p class="text-xs text-muted mt-0.5">${theme.builtIn ? 'Built-in' : 'Custom'} • ${theme.headingFont === 'serif' ? 'Serif' : 'Sans'} headings</p>
+        <p class="font-bold text-sm text-slate-900 truncate">${esc(theme.name)}</p>
+        <p class="text-[11px] text-slate-500 mt-0.5">${theme.builtIn ? 'Built-in' : 'Custom'} • ${theme.headingFont === 'serif' ? 'Serif' : 'Sans'}</p>
       </div>
-      ${active ? '<span class="chip chip-accent shrink-0">Active</span>' : ''}
+      ${active ? '<span class="chip chip-navy text-[10px] shrink-0">Active</span>' : ''}
     </div>
     ${!theme.builtIn ? `
     <div class="absolute top-2.5 right-2.5 flex gap-1">
-      <button class="icon-btn bg-white border border-line" data-action="edit-theme" data-id="${theme.id}" aria-label="Edit ${esc(theme.name)}"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-      <button class="icon-btn danger bg-white border border-line" data-action="delete-theme" data-id="${theme.id}" aria-label="Delete ${esc(theme.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      <button class="icon-btn bg-white border border-slate-200" data-action="edit-theme" data-id="${theme.id}" aria-label="Edit ${esc(theme.name)}"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+      <button class="icon-btn danger bg-white border border-slate-200" data-action="delete-theme" data-id="${theme.id}" aria-label="Delete ${esc(theme.name)}"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
     </div>` : ''}
   </div>`;
 }
@@ -1598,16 +2096,20 @@ async function renderThemes() {
   App.themeCache = await db.themes.toArray();
   const activeId = (App.church && App.church.activeThemeId) || '';
   return `
-  <div class="mb-6">
-    <h1 class="text-2xl font-semibold">Themes</h1>
-    <p class="text-sm text-muted mt-1">Choose how the live preview and every PDF looks. Click a theme to activate it.</p>
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Document Themes</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Select the visual appearance of printed programs and live previews.</p>
+    </div>
+    <button class="btn btn-primary" data-action="new-theme"><i data-lucide="plus" class="w-4 h-4"></i>Create Custom Theme</button>
   </div>
-  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
     ${App.themeCache.map(t => themeCardHtml(t, App.church, activeId)).join('')}
-    <button class="card p-4 sm:p-5 border-dashed hover:border-accent transition-colors flex flex-col items-center justify-center text-center min-h-[280px]" data-action="new-theme">
-      <div class="w-11 h-11 rounded-xl bg-accent/10 text-accent flex items-center justify-center"><i data-lucide="plus" class="w-5 h-5"></i></div>
-      <p class="font-semibold mt-3">Create Theme</p>
-      <p class="text-xs text-muted mt-1 px-2">Custom colors, fonts and layout</p>
+    <button class="card p-4 border-dashed border-slate-300 hover:border-blue-900 hover:bg-slate-50 transition-colors flex flex-col items-center justify-center text-center min-h-[270px] group" data-action="new-theme">
+      <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="plus" class="w-5 h-5"></i></div>
+      <p class="font-bold text-slate-800 mt-3 text-sm">Create Theme</p>
+      <p class="text-xs text-slate-500 mt-1 px-2">Custom colors, fonts and border styles</p>
     </button>
   </div>`;
 }
@@ -1618,7 +2120,7 @@ async function setActiveTheme(id) {
   if (App.church.activeThemeId === id) { toast(theme.name + ' is already active', 'info'); return; }
   App.church.activeThemeId = id;
   await db.church.put(App.church);
-  toast(theme.name + ' theme applied');
+  toast(theme.name + ' theme activated');
   showPage('themes');
 }
 
@@ -1637,9 +2139,9 @@ function getSeg(groupId) {
 async function openThemeEditor(id) {
   const theme = id ? await db.themes.get(id) : null;
   App.themeEditorId = theme ? theme.id : null;
-  $('#theme-modal-title').textContent = theme ? 'Edit Theme' : 'Create Theme';
+  $('#theme-modal-title').textContent = theme ? 'Edit Theme' : 'Create Custom Theme';
   $('#th-name').value = theme ? theme.name : '';
-  const primary = theme ? theme.primary : '#1F3A5F';
+  const primary = theme ? theme.primary : '#1E3A8A';
   const secondary = theme ? (theme.secondary || '#5C6670') : '#5C6670';
   $('#th-primary').value = primary;
   $('#th-secondary').value = secondary;
@@ -1685,7 +2187,7 @@ async function deleteTheme(id) {
   if (!theme) return;
   const ok = await confirmDialog({
     title: 'Delete theme?',
-    text: '"' + theme.name + '" will be removed.',
+    text: '"' + theme.name + '" will be deleted.',
     confirmText: 'Delete',
   });
   if (!ok) return;
@@ -1700,52 +2202,75 @@ async function deleteTheme(id) {
 }
 
 // ======================================
-// ACCOUNT
+// ACCOUNT & DATA MANAGEMENT
 // ======================================
 
 async function renderAccount() {
   const c = App.church || {};
   return `
   <div class="mb-6">
-    <h1 class="text-2xl font-semibold">Account</h1>
-    <p class="text-sm text-muted mt-1">This device's local workspace.</p>
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900">Account &amp; Data Management</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Manage local storage, perform JSON backups and restore services.</p>
   </div>
 
-  <div class="card p-6 sm:p-8 max-w-md">
-    <div class="flex flex-col items-center text-center">
-      <div class="w-16 h-16 rounded-2xl overflow-hidden bg-accent/10 text-accent flex items-center justify-center font-serif text-2xl font-semibold shrink-0">
-        ${c.logo ? '<img src="' + c.logo + '" alt="' + esc(c.name) + ' logo" class="w-full h-full object-cover">' : esc(initialsOf(c.name))}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+    <div class="card p-6">
+      <div class="flex flex-col items-center text-center">
+        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm" style="width: 64px; height: 64px; min-width: 64px; min-height: 64px;">
+          ${c.logo ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="' + esc(c.name) + ' logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">' : '<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">'}
+        </div>
+        <h2 class="text-lg font-bold mt-3 text-slate-900">${esc(c.name || 'Redeem Church')}</h2>
+        <p class="text-xs text-slate-500 mt-0.5 break-all">${esc(c.email || 'hello@redeemchurch.org')}</p>
+        <span class="chip chip-navy mt-2.5">Local Workspace</span>
       </div>
-      <h2 class="text-lg font-semibold mt-4">${esc(c.name || 'Redeem Church')}</h2>
-      <p class="text-sm text-muted mt-0.5 break-all">${esc(c.email || 'No email set — add one in Church Settings')}</p>
-      <span class="chip mt-3">Local workspace</span>
+
+      <div class="mt-5 divide-y divide-slate-100 border-y border-slate-100 text-xs">
+        <div class="flex items-center justify-between py-2.5">
+          <span class="text-slate-500 flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>Created</span>
+          <span class="font-semibold text-slate-800">${esc(fmtMonthYear(c.createdAt))}</span>
+        </div>
+        <div class="flex items-center justify-between py-2.5">
+          <span class="text-slate-500 flex items-center gap-2"><i data-lucide="database" class="w-4 h-4 text-slate-400"></i>IndexedDB Storage</span>
+          <span class="font-semibold text-slate-800" id="acc-storage">—</span>
+        </div>
+        <div class="flex items-center justify-between py-2.5">
+          <span class="text-slate-500 flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>Privacy</span>
+          <span class="font-semibold text-emerald-700">Stored on your device</span>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-col sm:flex-row gap-2.5">
+        <button class="btn btn-ghost flex-1 text-xs" data-action="nav" data-page="settings"><i data-lucide="settings" class="w-4 h-4"></i>Settings</button>
+        <button class="btn btn-danger flex-1 text-xs" data-action="sign-out"><i data-lucide="trash-2" class="w-4 h-4"></i>Reset Data</button>
+      </div>
     </div>
 
-    <div class="mt-6 divide-y divide-line border-y border-line text-sm">
-      <div class="flex items-center justify-between py-3">
-        <span class="text-muted flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4"></i>Account created</span>
-        <span class="font-medium">${esc(fmtMonthYear(c.createdAt))}</span>
+    <!-- Backup & Export Section -->
+    <div class="space-y-4">
+      <div class="card p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center shrink-0"><i data-lucide="download" class="w-4 h-4"></i></div>
+          <div>
+            <h3 class="font-bold text-sm text-slate-900">Backup &amp; Export</h3>
+            <p class="text-xs text-slate-500">Download a full JSON archive of your data.</p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">Exports all templates, saved Sunday programs and church branding to a single portable file.</p>
+        <button class="btn btn-primary w-full mt-4 text-xs" data-action="export-backup"><i data-lucide="download" class="w-4 h-4"></i>Export JSON Backup</button>
       </div>
-      <div class="flex items-center justify-between py-3">
-        <span class="text-muted flex items-center gap-2"><i data-lucide="database" class="w-4 h-4"></i>Storage used</span>
-        <span class="font-medium" id="acc-storage">—</span>
-      </div>
-      <div class="flex items-center justify-between py-3">
-        <span class="text-muted flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4"></i>Data location</span>
-        <span class="font-medium">This browser</span>
-      </div>
-    </div>
 
-    <div class="mt-6 flex flex-col sm:flex-row gap-3">
-      <button class="btn btn-ghost flex-1" data-action="nav" data-page="settings"><i data-lucide="settings" class="w-4 h-4"></i>Account Settings</button>
-      <button class="btn btn-danger flex-1" data-action="sign-out"><i data-lucide="log-out" class="w-4 h-4"></i>Sign Out</button>
-    </div>
-  </div>
-
-  <div class="mt-4 max-w-md">
-    <div class="flex gap-3 p-4 rounded-xl bg-paper border border-line text-sm text-muted">
-      <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>
-      <p>Cloud accounts with sign-in across phone, laptop and tablet are on the roadmap (Supabase). Today, everything is stored safely on this device and works offline.</p>
+      <div class="card p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="upload" class="w-4 h-4"></i></div>
+          <div>
+            <h3 class="font-bold text-sm text-slate-900">Restore from Backup</h3>
+            <p class="text-xs text-slate-500">Import a previously saved JSON file.</p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">Restores all templates and historical programs back into this browser.</p>
+        <button class="btn btn-ghost w-full mt-4 text-xs" data-action="import-backup"><i data-lucide="upload" class="w-4 h-4"></i>Restore from File</button>
+        <input type="file" id="backup-file" accept=".json" class="hidden">
+      </div>
     </div>
   </div>`;
 }
@@ -1754,16 +2279,178 @@ function afterAccount() {
   if (navigator.storage && navigator.storage.estimate) {
     navigator.storage.estimate().then(est => {
       const el = document.getElementById('acc-storage');
-      if (el && est && est.usage != null) el.textContent = (est.usage / 1048576).toFixed(1) + ' MB';
+      if (el && est && est.usage != null) el.textContent = (est.usage / 1048576).toFixed(2) + ' MB';
     }).catch(() => {});
+  }
+}
+
+async function exportBackupJson() {
+  try {
+    const [church, templates, services, themes, pdfHistory] = await Promise.all([
+      db.church.toArray(),
+      db.templates.toArray(),
+      db.services.toArray(),
+      db.themes.toArray(),
+      db.pdfHistory.toArray(),
+    ]);
+
+    const backup = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      church, templates, services, themes, pdfHistory,
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'redeem-church-backup-' + isoOf(new Date()) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Backup downloaded');
+  } catch (e) {
+    console.error(e);
+    toast('Could not export backup', 'error');
+  }
+}
+
+async function handleBackupFile(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    toast('Backup file is too large (max 10MB)', 'error');
+    return;
+  }
+  try {
+    const text = await file.text();
+    // Prevent prototype pollution in JSON payload
+    if (/"(?:__proto__|constructor|prototype)"\s*:/i.test(text)) {
+      toast('Security warning: invalid properties detected in backup file', 'error');
+      return;
+    }
+    const data = JSON.parse(text);
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.templates) || !Array.isArray(data.church)) {
+      toast('Invalid backup format: expected church and templates arrays', 'error');
+      return;
+    }
+
+    const cleanChurch = data.church.map(c => {
+      if (!c || typeof c !== 'object') return null;
+      return {
+        id: String(c.id || 'main'),
+        name: String(c.name || 'Redeem Church').slice(0, 100),
+        tagline: String(c.tagline || '').slice(0, 120),
+        address: String(c.address || '').slice(0, 200),
+        phone: String(c.phone || '').slice(0, 50),
+        email: String(c.email || '').slice(0, 100),
+        website: String(c.website || '').slice(0, 100),
+        brandColor: isValidHex(c.brandColor) ? c.brandColor : '#1E3A8A',
+        logo: c.logo ? safeImgSrc(String(c.logo)) : null,
+        logoRemoved: !!c.logoRemoved,
+        activeThemeId: c.activeThemeId ? String(c.activeThemeId).slice(0, 50) : null,
+        createdAt: c.createdAt || new Date().toISOString()
+      };
+    }).filter(Boolean);
+
+    const cleanTemplates = (data.templates || []).map(t => {
+      if (!t || typeof t !== 'object') return null;
+      return {
+        id: String(t.id || uid()),
+        name: String(t.name || 'Untitled Template').slice(0, 100),
+        description: String(t.description || '').slice(0, 300),
+        items: Array.isArray(t.items) ? t.items.map(it => ({
+          id: String(it.id || uid()),
+          title: String(it.title || 'Item').slice(0, 100),
+          description: String(it.description || '').slice(0, 300),
+          requiresPerson: !!it.requiresPerson
+        })) : [],
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: t.updatedAt || new Date().toISOString()
+      };
+    }).filter(Boolean);
+
+    const cleanServices = (Array.isArray(data.services) ? data.services : []).map(s => {
+      if (!s || typeof s !== 'object') return null;
+      return {
+        id: String(s.id || uid()),
+        templateId: s.templateId ? String(s.templateId) : null,
+        templateName: s.templateName ? String(s.templateName).slice(0, 100) : '',
+        date: String(s.date || isoOf(nextSunday())).slice(0, 30),
+        theme: String(s.theme || '').slice(0, 150),
+        description: String(s.description || '').slice(0, 300),
+        items: Array.isArray(s.items) ? s.items.map(it => ({
+          id: String(it.id || uid()),
+          title: String(it.title || 'Item').slice(0, 100),
+          description: String(it.description || '').slice(0, 300),
+          requiresPerson: !!it.requiresPerson,
+          person: String(it.person || '').slice(0, 100)
+        })) : [],
+        createdAt: s.createdAt || new Date().toISOString(),
+        updatedAt: s.updatedAt || new Date().toISOString()
+      };
+    }).filter(Boolean);
+
+    const cleanThemes = (Array.isArray(data.themes) ? data.themes : []).map(th => {
+      if (!th || typeof th !== 'object') return null;
+      return {
+        id: String(th.id || uid()),
+        name: String(th.name || 'Theme').slice(0, 60),
+        primary: isValidHex(th.primary) ? th.primary : '#1E3A8A',
+        secondary: isValidHex(th.secondary) ? th.secondary : '#5C6670',
+        headingFont: th.headingFont === 'serif' ? 'serif' : 'sans',
+        bodyFont: th.bodyFont === 'serif' ? 'serif' : 'sans',
+        borderStyle: ['none', 'line', 'double'].includes(th.borderStyle) ? th.borderStyle : 'none',
+        footerStyle: ['classic', 'line', 'minimal'].includes(th.footerStyle) ? th.footerStyle : 'classic',
+        logoPosition: th.logoPosition === 'left' ? 'left' : 'center',
+        isDefault: !!th.isDefault
+      };
+    }).filter(Boolean);
+
+    const cleanHistory = (Array.isArray(data.pdfHistory) ? data.pdfHistory : []).map(h => {
+      if (!h || typeof h !== 'object') return null;
+      return {
+        id: String(h.id || uid()),
+        serviceId: h.serviceId ? String(h.serviceId) : null,
+        title: String(h.title || 'Order of Service').slice(0, 100),
+        date: String(h.date || '').slice(0, 30),
+        createdAt: h.createdAt || new Date().toISOString(),
+        service: h.service && typeof h.service === 'object' ? h.service : null,
+        church: h.church && typeof h.church === 'object' ? h.church : null,
+        theme: h.theme && typeof h.theme === 'object' ? h.theme : null,
+        fileName: sanitizeFile(String(h.fileName || 'service.pdf')),
+        thumbnail: h.thumbnail ? safeImgSrc(String(h.thumbnail)) : null
+      };
+    }).filter(Boolean);
+
+    const ok = await confirmDialog({
+      title: 'Restore backup data?',
+      text: 'Import ' + cleanTemplates.length + ' templates and ' + cleanServices.length + ' services.',
+      confirmText: 'Restore',
+    });
+    if (!ok) return;
+
+    if (cleanChurch.length) await db.church.bulkPut(cleanChurch);
+    if (cleanTemplates.length) await db.templates.bulkPut(cleanTemplates);
+    if (cleanServices.length) await db.services.bulkPut(cleanServices);
+    if (cleanThemes.length) await db.themes.bulkPut(cleanThemes);
+    if (cleanHistory.length) await db.pdfHistory.bulkPut(cleanHistory);
+
+    App.church = await db.church.get('main');
+    await loadThemes();
+    applyAccent();
+    updateBranding();
+    toast('Backup restored successfully');
+    showPage('dashboard');
+  } catch (err) {
+    console.error(err);
+    toast('Failed to restore backup: ' + (err.message || 'corrupt file'), 'error');
   }
 }
 
 async function signOut() {
   const ok = await confirmDialog({
-    title: 'Sign out and clear this workspace?',
-    text: 'This removes all templates, services, themes, PDF history and branding stored in this browser. This cannot be undone.',
-    confirmText: 'Clear and sign out',
+    title: 'Reset workspace data?',
+    text: 'This will remove all templates and saved services from this browser. Ensure you have downloaded a backup.',
+    confirmText: 'Reset',
   });
   if (!ok) return;
   try { await db.delete(); } catch (e) { /* ignore */ }
@@ -1771,7 +2458,7 @@ async function signOut() {
 }
 
 // ======================================
-// MODALS
+// MODAL CONTROLLER
 // ======================================
 
 function openModal(id) {
@@ -1789,10 +2476,10 @@ function closeModal(id) {
   m.classList.remove('show');
   m.setAttribute('aria-hidden', 'true');
   setTimeout(() => {
-    if (m.classList.contains('show')) return; // re-opened meanwhile
+    if (m.classList.contains('show')) return;
     m.classList.add('hidden');
     if (!$('.modal.show')) document.body.style.overflow = '';
-  }, 210);
+  }, 200);
 }
 
 function closeAllModals() {
@@ -1829,8 +2516,8 @@ async function confirmDialog(opts) {
     showCancelButton: true,
     confirmButtonText: confirmText,
     cancelButtonText: 'Cancel',
-    confirmButtonColor: (App.church && App.church.brandColor) || '#1E40AF',
-    cancelButtonColor: '#737373',
+    confirmButtonColor: (App.church && App.church.brandColor) || '#1E3A8A',
+    cancelButtonColor: '#64748B',
     focusCancel: true,
   });
   return res.isConfirmed;
@@ -1853,10 +2540,11 @@ const VIEWS = {
   account:        { render: renderAccount, after: afterAccount },
 };
 
-const BOTTOM_SHORT = { dashboard: 'Home', templates: 'Templates', newService: 'New', history: 'History', settings: 'Settings' };
+const BOTTOM_SHORT = { dashboard: 'Home', templates: 'Templates', newService: 'Plan', history: 'History', settings: 'Settings' };
 
 async function showPage(page) {
   App.page = page;
+  App.searchQuery = '';
   closeDrawer();
   destroyFlatpickrs();
   await renderView();
@@ -1885,9 +2573,17 @@ function buildNav() {
   $('#drawer-nav').innerHTML = items;
   $('#bottom-nav-inner').innerHTML = BOTTOM_NAV.map(id => {
     const n = NAV_ITEMS.find(x => x.id === id) || {};
+    if (id === 'newService') {
+      return `
+      <div class="flex items-center justify-center">
+        <button class="bottom-nav-fab w-11 h-11 -mt-4 rounded-full bg-blue-900 text-white border-2 border-white flex items-center justify-center hover:bg-blue-800" data-action="nav" data-page="newService" data-bottom="newService" aria-label="Plan Sunday Service" title="Plan Sunday Service">
+          <i data-lucide="plus" class="w-5 h-5 stroke-[2.5]"></i>
+        </button>
+      </div>`;
+    }
     return `
-    <button class="flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-muted transition-colors" data-action="nav" data-page="${id}" data-bottom="${id}" aria-label="${esc(n.label || id)}">
-      <i data-lucide="${n.icon}" class="w-5 h-5"></i><span>${esc(BOTTOM_SHORT[id] || n.label || id)}</span>
+    <button class="flex flex-col items-center justify-center gap-1 py-1.5 text-[10px] font-medium text-slate-500 transition-colors" data-action="nav" data-page="${id}" data-bottom="${id}" aria-label="${esc(n.label || id)}">
+      <i data-lucide="${n.icon}" class="w-4 h-4"></i><span>${esc(BOTTOM_SHORT[id] || n.label || id)}</span>
     </button>`;
   }).join('');
 }
@@ -1897,8 +2593,15 @@ function updateNavActive() {
   $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === target));
   $$('[data-bottom]').forEach(b => {
     const active = b.dataset.bottom === target;
-    b.classList.toggle('text-accent', active);
-    b.classList.toggle('text-muted', !active);
+    if (b.dataset.bottom === 'newService') {
+      b.classList.toggle('ring-2', active);
+      b.classList.toggle('ring-blue-900', active);
+      b.classList.toggle('ring-offset-2', active);
+    } else {
+      b.classList.toggle('text-blue-900', active);
+      b.classList.toggle('font-bold', active);
+      b.classList.toggle('text-slate-500', !active);
+    }
   });
 }
 
@@ -1916,19 +2619,84 @@ function closeDrawer() {
 }
 
 // ======================================
-// GLOBAL EVENTS
+// GLOBAL EVENT DISPATCHER
 // ======================================
+
+let searchDebounceTimer = null;
+function handleSearchInput(type, value) {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(async () => {
+    App.searchQuery = value.trim();
+    if (type === 'templates') {
+      const container = document.getElementById('tpl-list-container');
+      if (container && App.page === 'templates') {
+        let templates = (await db.templates.toArray()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        if (App.searchQuery) {
+          const q = App.searchQuery.toLowerCase();
+          templates = templates.filter(t => t.name.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q)));
+        }
+        container.innerHTML = templates.length
+          ? '<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">' + templates.map(templateCardHtml).join('') + '</div>'
+          : `<div class="card p-12 text-center max-w-xl mx-auto">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="layout-template" class="w-6 h-6"></i></div>
+              <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No templates matching "' + esc(App.searchQuery) + '"' : 'No templates created yet'}</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create your first template to quickly prepare Sunday services.</p>
+              <button class="btn btn-primary mt-5 text-xs" data-action="open-template-editor"><i data-lucide="plus" class="w-4 h-4"></i>Create Template</button>
+            </div>`;
+        refreshIcons();
+      }
+    } else if (type === 'sundays') {
+      const container = document.getElementById('sundays-list-container');
+      if (container && App.page === 'sundays') {
+        let services = (await db.services.toArray())
+          .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+        if (App.searchQuery) {
+          const q = App.searchQuery.toLowerCase();
+          services = services.filter(s => (s.theme && s.theme.toLowerCase().includes(q)) || (s.templateName && s.templateName.toLowerCase().includes(q)) || (s.date && s.date.includes(q)));
+        }
+        container.innerHTML = services.length
+          ? '<div class="card max-w-4xl divide-y divide-slate-100">' + services.map(sundayRowHtml).join('') + '</div>'
+          : `<div class="card p-12 text-center max-w-2xl mx-auto">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="calendar-days" class="w-6 h-6"></i></div>
+              <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No services found' : 'No saved Sundays yet'}</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create a Sunday service, assign ministers, and save it here.</p>
+              <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+            </div>`;
+        refreshIcons();
+      }
+    } else if (type === 'history') {
+      const container = document.getElementById('history-list-container');
+      if (container && App.page === 'history') {
+        let records = (await db.pdfHistory.toArray())
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        if (App.searchQuery) {
+          const q = App.searchQuery.toLowerCase();
+          records = records.filter(r => (r.service && r.service.theme && r.service.theme.toLowerCase().includes(q)) || (r.date && r.date.includes(q)) || (r.fileName && r.fileName.toLowerCase().includes(q)));
+        }
+        container.innerHTML = records.length
+          ? '<div class="space-y-3.5 max-w-4xl">' + records.map(historyCardHtml).join('') + '</div>'
+          : `<div class="card p-12 text-center max-w-2xl mx-auto">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 mx-auto flex items-center justify-center"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+              <h3 class="mt-4 font-bold text-slate-800">${App.searchQuery ? 'No PDFs match search' : 'No PDFs generated yet'}</h3>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Generate your first order of service PDF to automatically save a snapshot here.</p>
+              <button class="btn btn-primary mt-5 text-xs" data-action="nav" data-page="newService"><i data-lucide="plus" class="w-4 h-4"></i>Create Sunday Service</button>
+            </div>`;
+        refreshIcons();
+      }
+    }
+  }, 100);
+}
 
 function bindGlobalEvents() {
   document.addEventListener('click', (e) => {
-    // Close modal via backdrop / close buttons
+    // Modal backdrop close
     const closer = e.target.closest('[data-close-modal]');
     if (closer) {
       const m = closer.closest('.modal');
       if (m) closeModal(m.id);
       return;
     }
-    // Segmented controls
+    // Segmented buttons
     const segBtn = e.target.closest('.seg-btn');
     if (segBtn) {
       const seg = segBtn.closest('.seg');
@@ -1953,8 +2721,8 @@ function bindGlobalEvents() {
       'delete-template':          () => deleteTemplate(id),
       'save-template':            () => saveTemplate(),
       'back-templates':           () => showPage('templates'),
-      'add-item':                 () => openItemModal(null),
-      'edit-item':                () => openItemModal((App.currentTemplate && App.currentTemplate.items.find(i => i.id === id)) || null),
+      'add-item':                 () => openItemModal(null, 'template'),
+      'edit-item':                () => openItemModal((App.currentTemplate && App.currentTemplate.items.find(i => i.id === id)) || null, 'template'),
       'remove-item':              () => removeTemplateItem(id),
       'save-item':                () => saveItemFromModal(),
       'continue-new-service':     () => continueNewService(),
@@ -1966,6 +2734,11 @@ function bindGlobalEvents() {
       'preview-history':          () => previewHistoryRecord(id),
       'download-history':         () => downloadHistoryPdf(id),
       'download-history-current': () => { if (App.pdfPreviewId) downloadHistoryPdf(App.pdfPreviewId); },
+      'print-history-current':    () => {
+        document.body.classList.add('modal-printing');
+        window.print();
+        setTimeout(() => document.body.classList.remove('modal-printing'), 500);
+      },
       'delete-history':           () => deleteHistoryRecord(id),
       'set-theme':                () => setActiveTheme(id),
       'new-theme':                () => openThemeEditor(null),
@@ -1973,9 +2746,58 @@ function bindGlobalEvents() {
       'delete-theme':             () => deleteTheme(id),
       'save-theme':               () => saveThemeFromModal(),
       'logo-upload':              () => { const f = document.getElementById('logo-file'); if (f) f.click(); },
-      'logo-remove':              () => { App.church.logo = null; showPage('settings'); },
+      'logo-remove':              async () => {
+        App.church.logo = null;
+        App.church.logoRemoved = true;
+        try { await db.church.put(App.church); } catch (e) {}
+        updateBranding();
+        showPage('settings');
+        toast('Logo removed');
+      },
       'save-settings':            () => saveChurchSettings(),
       'sign-out':                 () => signOut(),
+      'export-backup':            () => exportBackupJson(),
+      'import-backup':            () => { const f = document.getElementById('backup-file'); if (f) f.click(); },
+      'print-live-preview':       () => window.print(),
+      'add-service-item':         () => openItemModal(null, 'service'),
+      'edit-service-item':        () => {
+        const it = (App.currentService && App.currentService.items.find(i => i.id === id)) || null;
+        if (it) openItemModal(it, 'service');
+      },
+      'remove-service-item':      async () => {
+        if (!App.currentService) return;
+        const it = App.currentService.items.find(i => i.id === id);
+        const name = it ? it.title : 'this item';
+        const ok = await confirmDialog({
+          title: 'Remove service item?',
+          text: `Are you sure you want to remove "${name}" from this service?`,
+          confirmText: 'Remove'
+        });
+        if (!ok) return;
+        App.currentService.items = App.currentService.items.filter(i => i.id !== id);
+        refreshServiceEditorItems();
+        refreshLivePreview();
+        toast('Item removed');
+      },
+      'zoom-preview':             () => {
+        const delta = parseFloat(t.dataset.delta || '0');
+        App.previewScale = Math.max(0.6, Math.min(1.4, App.previewScale + delta));
+        const scaler = document.getElementById('live-paper-scaler');
+        const txt = document.getElementById('zoom-level-text');
+        if (scaler) scaler.style.transform = `scale(${App.previewScale})`;
+        if (txt) txt.textContent = Math.round(App.previewScale * 100) + '%';
+      },
+      'quick-accent':             () => {
+        const hex = t.dataset.hex;
+        if (hex && App.church) {
+          App.church.brandColor = hex;
+          const pick = document.getElementById('set-color');
+          const hexInput = document.getElementById('set-color-hex');
+          if (pick) pick.value = hex;
+          if (hexInput) hexInput.value = hex;
+          applyAccent();
+        }
+      }
     };
     const fn = ACTIONS[action];
     if (fn) fn();
@@ -1983,7 +2805,21 @@ function bindGlobalEvents() {
 
   document.addEventListener('input', (e) => {
     const el = e.target;
-    if (!el || !el.id && !el.dataset) return;
+    if (!el || (!el.id && !el.dataset)) return;
+
+    // Search inputs (in-place filtering without destroying the active input)
+    if (el.id === 'tpl-search-input') {
+      handleSearchInput('templates', el.value);
+      return;
+    }
+    if (el.id === 'sundays-search-input') {
+      handleSearchInput('sundays', el.value);
+      return;
+    }
+    if (el.id === 'history-search-input') {
+      handleSearchInput('history', el.value);
+      return;
+    }
 
     // Service editor live fields
     if (el.dataset.person !== undefined && el.dataset.person && App.currentService) {
@@ -1998,6 +2834,10 @@ function bindGlobalEvents() {
     }
     if (el.dataset.live && App.currentService) {
       App.currentService[el.dataset.live] = el.value;
+      if (el.dataset.live === 'theme') {
+        const titleEl = document.getElementById('se-header-title');
+        if (titleEl) titleEl.textContent = el.value || 'Sunday Order of Service';
+      }
       refreshLivePreview();
       return;
     }
@@ -2051,6 +2891,11 @@ function bindGlobalEvents() {
       el.value = '';
       return;
     }
+    if (el.id === 'backup-file') {
+      handleBackupFile(el.files && el.files[0]);
+      el.value = '';
+      return;
+    }
     if (el.id === 'se-theme-select' && App.church) {
       App.church.activeThemeId = el.value;
       db.church.put(App.church)
@@ -2066,7 +2911,7 @@ function bindGlobalEvents() {
 }
 
 // ======================================
-// INITIALIZATION
+// BOOTSTRAP INITIALIZATION
 // ======================================
 
 async function boot() {
@@ -2074,6 +2919,16 @@ async function boot() {
     await db.open();
     await seedIfEmpty();
     App.church = await db.church.get('main');
+    if (App.church) {
+      let changed = false;
+      if (!App.church.logo && !App.church.logoRemoved) { App.church.logo = '/logo.png'; changed = true; }
+      if (App.church.name === 'Redeem Church') {
+        App.church.name = 'Order of Service';
+        App.church.tagline = 'Plan • Create • Worship';
+        changed = true;
+      }
+      if (changed) { try { await db.church.put(App.church); } catch (e) {} }
+    }
     await loadThemes();
     applyAccent();
     updateBranding();
@@ -2081,11 +2936,11 @@ async function boot() {
     bindGlobalEvents();
     await showPage('dashboard');
     document.getElementById('app').classList.remove('hidden');
-    await new Promise(r => setTimeout(r, 550));
+    await new Promise(r => setTimeout(r, 350));
     const ls = document.getElementById('loading-screen');
     if (ls) {
       ls.style.opacity = '0';
-      setTimeout(() => { ls.remove(); }, 520);
+      setTimeout(() => { ls.remove(); }, 320);
     }
   } catch (err) {
     console.error(err);
@@ -2099,10 +2954,10 @@ function fatalScreen(err) {
   ls.innerHTML = `
     <div class="text-center max-w-sm px-6">
       <div class="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto"><i data-lucide="alert-circle" class="w-7 h-7"></i></div>
-      <h2 class="text-lg font-semibold mt-4">Could not start the app</h2>
-      <p class="text-sm text-muted mt-2">Your browser may be blocking local storage (try a normal window instead of private mode), or a required library failed to load.</p>
-      <p class="text-xs text-muted mt-3 break-all">${esc(String((err && err.message) || err))}</p>
-      <button class="btn btn-primary mt-6" onclick="window.location.reload()">Try Again</button>
+      <h2 class="text-lg font-bold mt-4 text-slate-900">Could not start planner</h2>
+      <p class="text-xs text-slate-500 mt-2">Browser storage may be restricted in private window mode or offline.</p>
+      <p class="text-xs text-red-600 mt-3 font-mono break-all">${esc(String((err && err.message) || err))}</p>
+      <button class="btn btn-primary mt-5 text-xs" onclick="window.location.reload()">Reload Application</button>
     </div>`;
   refreshIcons();
 }

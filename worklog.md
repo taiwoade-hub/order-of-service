@@ -7,7 +7,7 @@ Task: Build "Redeem Church — Order of Service Planner" as a single-file applic
 
 Work Log:
 - Initialized the fullstack environment (Next.js 16 dev server on port 3000, auto-run by .zscripts/dev.sh).
-- Built the entire SPA inside one file: `/home/z/my-project/download/redeem-order-service/index.html` (2,565 lines), written in 8 sequential chunks (head/design-system/shell → modals+CDN libs+state/utils → DB+settings → templates+drag-drop → service builder+live preview → PDF engine → history/sundays/dashboard → themes/account/nav/init).
+- Built the entire SPA inside one file: `download/redeem-order-service/index.html` (2,565 lines), written in 8 sequential chunks (head/design-system/shell → modals+CDN libs+state/utils → DB+settings → templates+drag-drop → service builder+live preview → PDF engine → history/sundays/dashboard → themes/account/nav/init).
 - Libraries via CDN: Tailwind CSS, Lucide, SortableJS, jsPDF, html2canvas, Flatpickr, SweetAlert2, Dexie.js (IndexedDB).
 - Database `RedeemServiceDB` (Dexie): church, templates, services, serviceItems, themes, pdfHistory; seeds 4 starter templates, 3 built-in themes, church profile on first run.
 - Parametric document engine: one renderer drives the on-screen A4 "paper" preview, theme-card miniatures and the jsPDF output (Classic / Modern / Minimal + unlimited custom themes with primary/secondary colors, serif/sans fonts, logo position, border style, footer style).

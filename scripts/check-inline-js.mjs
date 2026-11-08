@@ -1,14 +1,18 @@
 // Extracts inline <script> blocks (without src) from index.html and syntax-checks them with node --check
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-const file = process.argv[2] || '/home/z/my-project/download/redeem-order-service/index.html';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const file = process.argv[2] || path.resolve(__dirname, '../download/redeem-order-service/index.html');
 const html = fs.readFileSync(file, 'utf8');
 
 const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
 let m, i = 0, failed = 0;
-const tmpDir = '/home/z/my-project/scripts/_extracted';
+const tmpDir = path.resolve(__dirname, '_extracted');
 fs.mkdirSync(tmpDir, { recursive: true });
 
 while ((m = re.exec(html)) !== null) {

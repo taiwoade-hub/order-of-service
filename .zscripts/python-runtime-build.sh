@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-/home/z/my-project}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 BUILD_DIR="${BUILD_DIR:?BUILD_DIR is required}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.12}"
 NEXT_DIST_DIR="$BUILD_DIR/next-service-dist"
