@@ -3342,8 +3342,8 @@ async function renderDashboard() {
   <div class="card p-5 sm:p-6 mb-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
       <div class="flex items-center gap-4 min-w-0">
-        <div class="dashboard-logo-box rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm" style="width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; flex-shrink: 0; overflow: hidden;">
-          ${App.church && App.church.logo ? `<img src="${esc(safeImgSrc(App.church.logo))}" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">` : `<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">`}
+        <div class="dashboard-logo-box rounded-2xl bg-slate-900 text-white font-serif font-bold text-xl flex items-center justify-center p-1.5 shadow-sm" style="width: 56px; height: 56px; min-width: 56px; min-height: 56px; max-width: 56px; max-height: 56px; flex-shrink: 0; overflow: hidden;">
+          ${c.logo ? `<img src="${esc(safeImgSrc(c.logo))}" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain block" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; display: block;">` : esc(initialsOf(churchName))}
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2.5 flex-wrap">
@@ -3660,8 +3660,8 @@ async function renderAccount() {
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
     <div class="card p-6">
       <div class="flex flex-col items-center text-center">
-        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm" style="width: 64px; height: 64px; min-width: 64px; min-height: 64px;">
-          ${c.logo ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="' + esc(c.name) + ' logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">' : '<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">'}
+        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-slate-900 text-white font-serif font-bold text-2xl flex items-center justify-center p-1.5 shrink-0 shadow-sm" style="width: 64px; height: 64px; min-width: 64px; min-height: 64px;">
+          ${c.logo ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="' + esc(c.name) + ' logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">' : esc(initialsOf((App.user && App.user.name) || c.name || 'OS'))}
         </div>
         <h2 class="text-lg font-bold mt-3 text-slate-900">${esc((App.user && App.user.name) || c.name || 'Order of Service')}</h2>
         <p class="text-xs text-slate-500 mt-0.5 break-all">${esc((App.user && App.user.email) || c.email || 'hello@orderofservice.app')}</p>
