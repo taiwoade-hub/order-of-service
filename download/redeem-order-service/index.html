@@ -760,11 +760,8 @@ tailwind.config = {
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-slate-600 ml-auto shrink-0"></i>
       </button>
-      <div class="flex items-center justify-between px-2 pt-2 text-[11px] text-slate-500">
-        <button class="hover:text-slate-900 transition-colors flex items-center gap-1 font-medium" data-action="nav" data-page="landing">
-          <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Public Page</span>
-        </button>
-        <button class="hover:text-red-600 transition-colors flex items-center gap-1 font-medium" data-action="sign-out">
+      <div class="flex items-center justify-end px-2 pt-2 text-[11px] text-slate-500">
+        <button class="hover:text-red-600 transition-colors flex items-center gap-1 font-medium cursor-pointer" data-action="sign-out">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>Sign Out</span>
         </button>
       </div>
@@ -792,11 +789,8 @@ tailwind.config = {
           <p id="brand-profile-role-m" class="text-[11px] text-slate-500 truncate">Workspace User</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 pt-1 text-xs">
-        <button class="btn btn-ghost flex-1 py-1.5 text-xs" data-action="nav" data-page="landing">
-          <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Public Page</span>
-        </button>
-        <button class="btn btn-ghost flex-1 py-1.5 text-xs text-red-600 hover:text-red-700" data-action="sign-out">
+      <div class="flex items-center justify-end pt-1 text-xs">
+        <button class="btn btn-ghost py-1.5 px-3 text-xs text-red-600 hover:text-red-700" data-action="sign-out">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>Sign Out</span>
         </button>
       </div>
@@ -3325,7 +3319,8 @@ async function renderDashboard() {
   const upcomingServices = sortedServices.filter(s => s.date && s.date >= todayIso).sort((a, b) => a.date.localeCompare(b.date));
   const nextService = upcomingServices[0] || sortedServices[0] || null;
 
-  const churchName = (App.church && App.church.name) || 'Redeem Church';
+  const churchName = (App.church && App.church.name) || 'Order of Service';
+  const c = App.church || {};
   const churchInitials = initialsOf(churchName);
   const activeTheme = getActiveTheme();
   const nextSun = fmtLongDate(isoOf(nextSunday()));
@@ -4644,7 +4639,8 @@ async function boot() {
     const validPages = Object.keys(VIEWS);
     let initialPage = 'landing';
     if (App.user) {
-      initialPage = validPages.includes(hash) ? hash : 'dashboard';
+      // Authenticated users stay in the workspace; if they visit #landing redirect to dashboard
+      initialPage = (validPages.includes(hash) && hash !== 'landing') ? hash : 'dashboard';
     } else {
       initialPage = ['login', 'signup'].includes(hash) ? hash : 'landing';
     }
