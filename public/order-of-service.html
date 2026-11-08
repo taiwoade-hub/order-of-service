@@ -663,7 +663,7 @@ select.input {
 }
 
 /* ============================================================
-   Public Page Layout Isolation (Landing, Login, Signup)
+   Public & Auth Page Layout Isolation (Landing, Login, Signup)
    ============================================================ */
 body[data-public-page="true"] #desktop-sidebar,
 body[data-public-page="true"] #mobile-header,
@@ -679,6 +679,25 @@ body[data-public-page="true"] #view {
   max-width: none !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+body[data-auth-page="true"],
+body[data-auth-page="true"] #app,
+body[data-auth-page="true"] #main-content,
+body[data-auth-page="true"] #view,
+body[data-auth-page="true"] #view > .view-enter {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* Flat Architectural Print-Studio Grid (No gradients, no neon, no 3D) */
+.studio-grid-bg {
+  background-color: #F8FAFC;
+  background-image: url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M32 0H0v32' fill='none' stroke='%23E2E8F0' stroke-width='0.75'/%3E%3C/svg%3E");
+}
+.studio-dots-bg {
+  background-color: #FFFFFF;
+  background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='11' y='11' width='1.5' height='1.5' fill='%23CBD5E1'/%3E%3C/svg%3E");
 }
 </style>
 
@@ -709,15 +728,12 @@ tailwind.config = {
 <body class="antialiased" data-public-page="true">
 
 <!-- ==================== Loading screen ==================== -->
-<div id="loading-screen" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center gap-5 transition-opacity duration-300">
-  <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 p-2 flex items-center justify-center shadow-sm">
-    <img src="/logo-icon.png" alt="Order of Service" class="w-full h-full object-contain">
-  </div>
+<div id="loading-screen" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center gap-4 transition-opacity duration-300">
   <div class="text-center">
-    <p class="text-lg font-bold tracking-tight text-slate-900">Order of Service</p>
-    <p class="text-xs text-slate-500 font-medium tracking-wide uppercase mt-0.5">Plan • Create • Worship</p>
+    <p class="text-[11px] font-mono uppercase tracking-[0.2em] text-slate-400">Parish Liturgical Studio</p>
+    <p class="text-lg font-bold tracking-tight text-slate-900 mt-1">Order of Service</p>
   </div>
-  <div class="w-6 h-6 rounded-full border-2 border-slate-200 border-t-blue-900 spin"></div>
+  <div class="w-5 h-5 rounded-full border-2 border-slate-200 border-t-slate-900 spin"></div>
 </div>
 
 <!-- ==================== App shell ==================== -->
@@ -725,30 +741,28 @@ tailwind.config = {
 
   <!-- Sidebar (desktop) -->
   <aside id="desktop-sidebar" class="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-white border-r border-slate-200">
-    <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
-      <div id="brand-badge" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;">
-        <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
-      </div>
+    <div class="flex items-center justify-between px-5 h-16 border-b border-slate-200 shrink-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
       <div class="min-w-0">
         <p id="brand-name" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
-        <p class="text-[11px] text-slate-500">Plan • Create • Worship</p>
+        <p class="text-[11px] text-slate-500">Liturgical &amp; Print Studio</p>
       </div>
+      <span class="text-[10px] font-mono font-semibold text-slate-400 border border-slate-200 rounded px-1.5 py-0.5 shrink-0">A4</span>
     </div>
     <nav id="side-nav" class="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Main navigation"></nav>
     <div class="p-3 border-t border-slate-200 shrink-0">
       <button data-action="nav" data-page="account" class="w-full flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-slate-50 transition-colors text-left group">
-        <div id="brand-avatar" class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden shrink-0" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
+        <div id="brand-avatar" class="w-8 h-8 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+          OS
         </div>
         <div class="min-w-0 flex-1">
-          <p id="brand-profile-name" class="text-[13px] font-semibold text-slate-800 truncate group-hover:text-blue-900">Order of Service</p>
-          <p id="brand-profile-role" class="text-[11px] text-slate-500 truncate">Local Workspace</p>
+          <p id="brand-profile-name" class="text-[13px] font-semibold text-slate-800 truncate group-hover:text-slate-900">Order of Service</p>
+          <p id="brand-profile-role" class="text-[11px] text-slate-500 truncate">Parish Workspace</p>
         </div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-slate-600 ml-auto shrink-0"></i>
       </button>
-      <div class="flex items-center justify-between px-2 pt-2 text-[11px] text-slate-400">
-        <button class="hover:text-blue-900 transition-colors flex items-center gap-1 font-medium" data-action="nav" data-page="landing">
-          <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Landing Page</span>
+      <div class="flex items-center justify-between px-2 pt-2 text-[11px] text-slate-500">
+        <button class="hover:text-slate-900 transition-colors flex items-center gap-1 font-medium" data-action="nav" data-page="landing">
+          <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Public Page</span>
         </button>
         <button class="hover:text-red-600 transition-colors flex items-center gap-1 font-medium" data-action="sign-out">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>Sign Out</span>
@@ -761,22 +775,17 @@ tailwind.config = {
   <div id="drawer-backdrop" class="fixed inset-0 bg-slate-900/40 z-40 hidden lg:hidden"></div>
   <aside id="drawer" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85%] bg-white border-r border-slate-200 shadow-xl flex flex-col -translate-x-full transition-transform duration-200 lg:hidden">
     <div class="flex items-center justify-between px-5 h-16 border-b border-slate-200 shrink-0">
-      <div class="flex items-center gap-3 min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
-        <div id="brand-badge-m" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
-        </div>
-        <div class="min-w-0">
-          <p id="brand-name-m" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
-          <p class="text-[11px] text-slate-500">Plan • Create • Worship</p>
-        </div>
+      <div class="min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
+        <p id="brand-name-m" class="text-[13px] font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
+        <p class="text-[11px] text-slate-500">Liturgical &amp; Print Studio</p>
       </div>
       <button data-action="close-menu" class="icon-btn" aria-label="Close menu"><i data-lucide="x" class="w-5 h-5"></i></button>
     </div>
     <nav id="drawer-nav" class="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Mobile navigation"></nav>
     <div class="p-4 border-t border-slate-200 space-y-2">
       <div class="flex items-center gap-2.5 px-1">
-        <div class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden shrink-0" style="width: 32px; height: 32px;">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+        <div id="brand-avatar-m" class="w-8 h-8 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+          OS
         </div>
         <div class="min-w-0 flex-1">
           <p id="brand-profile-name-m" class="text-[13px] font-semibold text-slate-800 truncate">Order of Service</p>
@@ -785,7 +794,7 @@ tailwind.config = {
       </div>
       <div class="flex items-center gap-2 pt-1 text-xs">
         <button class="btn btn-ghost flex-1 py-1.5 text-xs" data-action="nav" data-page="landing">
-          <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Landing</span>
+          <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Public Page</span>
         </button>
         <button class="btn btn-ghost flex-1 py-1.5 text-xs text-red-600 hover:text-red-700" data-action="sign-out">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>Sign Out</span>
@@ -797,10 +806,7 @@ tailwind.config = {
   <!-- Mobile top header -->
   <header id="mobile-header" class="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
     <div class="flex items-center justify-between h-14 px-4">
-      <div class="flex items-center gap-2.5 min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
-        <div id="brand-badge-h" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-0.5 shrink-0 shadow-sm overflow-hidden" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
-        </div>
+      <div class="flex items-center gap-2 min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
         <p id="brand-name-h" class="text-sm font-bold tracking-wide truncate uppercase text-slate-900">Order of Service</p>
       </div>
       <div class="flex items-center gap-1.5">
@@ -1273,17 +1279,27 @@ db.version(1).stores({
   themes:      'id, name, createdAt',
   pdfHistory:  'id, serviceId, createdAt',
 });
+db.version(2).stores({
+  church:      'id',
+  templates:   'id, name, createdAt',
+  services:    'id, date, templateId, updatedAt',
+  serviceItems:'id, templateId',
+  themes:      'id, name, createdAt',
+  pdfHistory:  'id, serviceId, createdAt',
+  users:       'id, &email, churchName, createdAt',
+});
 
 async function seedIfEmpty() {
   if (await db.church.count() === 0) {
     await db.church.add({
       id: 'main',
       name: 'Order of Service',
-      tagline: 'Plan • Create • Worship',
+      tagline: 'Liturgical Planning & Print Studio',
       address: '12 Grace Avenue, Lagos', phone: '+234 800 000 0000', 
       email: 'hello@orderofservice.app', website: 'orderofservice.app',
-      brandColor: '#1E3A8A',
-      logo: '/logo.png',
+      brandColor: '#0F172A',
+      logo: null,
+      logoRemoved: true,
       activeThemeId: 'theme-classic',
       createdAt: new Date().toISOString(),
     });
@@ -1314,7 +1330,7 @@ async function loadThemes() {
 // ======================================
 
 function applyAccent() {
-  const hex = (App.church && App.church.brandColor) || '#1E3A8A';
+  const hex = (App.church && App.church.brandColor) || '#0F172A';
   const rgb = hexToRgb(hex);
   document.documentElement.style.setProperty('--accent-rgb', rgb.join(' '));
 }
@@ -1322,22 +1338,15 @@ function applyAccent() {
 function updateBranding() {
   const c = App.church || {};
   const name = c.name || 'Order of Service';
-  const logo = c.logo || '/logo.png';
-  const logoIcon = '/logo-icon.png';
-  ['brand-badge', 'brand-badge-m', 'brand-badge-h'].forEach(id => {
-    const el = document.getElementById(id); 
-    if (el) {
-      el.innerHTML = '<img src="' + logoIcon + '" alt="Order of Service" class="w-full h-full object-contain">';
-    }
-  });
-  ['brand-name', 'brand-name-m', 'brand-name-h', 'brand-profile-name'].forEach(id => {
+  const initials = initialsOf((App.user && App.user.name) || name);
+  ['brand-name', 'brand-name-m', 'brand-name-h'].forEach(id => {
     const el = document.getElementById(id); 
     if (el) el.textContent = name;
   });
-  const avatar = document.getElementById('brand-avatar');
-  if (avatar) {
-    avatar.innerHTML = '<img src="' + logoIcon + '" alt="' + esc(name) + ' logo" class="w-full h-full object-contain">';
-  }
+  ['brand-avatar', 'brand-avatar-m'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = initials;
+  });
 }
 
 function renderSettings() {
@@ -1359,7 +1368,7 @@ function renderSettings() {
         <div id="logo-preview" class="w-20 h-20 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm" style="width: 80px; height: 80px; min-width: 80px; min-height: 80px;">
           ${c.logo
             ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="Church logo" class="w-full h-full max-w-full max-h-full object-contain p-1.5" style="max-width: 100%; max-height: 100%;">'
-            : '<div class="text-center text-slate-400"><i data-lucide="image" class="w-7 h-7 mx-auto"></i><span class="text-[10px] block mt-0.5">No Logo</span></div>'}
+            : '<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50"><span class="font-serif font-bold text-base text-slate-600">' + esc(initialsOf(c.name || 'OS')) + '</span><span class="text-[9px] font-mono tracking-wider uppercase text-slate-400 mt-0.5">No Logo</span></div>'}
         </div>
         <div class="min-w-0">
           <div class="flex flex-wrap gap-2">
@@ -2886,7 +2895,7 @@ async function renderLanding() {
   return `
   <div class="min-h-screen bg-white text-slate-900 flex flex-col">
     <!-- Top Header -->
-    <header class="border-b border-slate-200 bg-white sticky top-0 z-40">
+    <header class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-40">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <button class="text-left flex items-center gap-3 cursor-pointer" data-action="nav" data-page="landing">
           <span class="text-sm font-bold tracking-tight text-slate-900 uppercase">Order of Service</span>
@@ -2912,17 +2921,18 @@ async function renderLanding() {
       </div>
     </header>
 
-    <!-- Editorial Hero & Live Sheet Specimen -->
-    <section class="border-b border-slate-200 bg-white">
+    <!-- Editorial Hero & Live Sheet Specimen with subtle architectural grid background -->
+    <section class="border-b border-slate-200 studio-grid-bg relative overflow-hidden">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-start">
           
           <!-- Left Column: Copy & Primary Actions -->
           <div class="lg:col-span-6 lg:pr-4 pt-2">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div class="inline-flex items-center gap-2 border border-slate-300 bg-white px-2.5 py-1 rounded-md text-[11px] font-mono uppercase tracking-[0.18em] text-slate-600 mb-4 shadow-2xs">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-900"></span>
               Weekly Worship &amp; Bulletin Publishing
-            </p>
-            <h1 class="mt-4 text-3xl sm:text-4xl lg:text-[42px] font-bold tracking-tight text-slate-900 leading-[1.15]">
+            </div>
+            <h1 class="text-3xl sm:text-4xl lg:text-[42px] font-bold tracking-tight text-slate-900 leading-[1.15]">
               Prepare Sunday service orders and print-ready A4 bulletins.
             </h1>
             <p class="mt-5 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
@@ -2931,28 +2941,20 @@ async function renderLanding() {
 
             <div class="mt-8 flex flex-wrap items-center gap-3">
               ${App.user ? `
-                <button class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="dashboard">
+                <button class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer shadow-xs" data-action="nav" data-page="dashboard">
                   Continue to Workspace
                 </button>
               ` : `
-                <button class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="signup">
+                <button class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer shadow-xs" data-action="nav" data-page="signup">
                   Create church workspace
                 </button>
-                <button class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="login">
+                <button class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer shadow-2xs" data-action="nav" data-page="login">
                   Log in
                 </button>
               `}
             </div>
 
-            ${!App.user ? `
-            <div class="mt-5">
-              <button class="text-xs font-medium text-slate-500 hover:text-slate-900 underline underline-offset-4 cursor-pointer" data-action="demo-login" data-role="pastor">
-                Or explore the sample workspace without registering
-              </button>
-            </div>
-            ` : ''}
-
-            <dl class="mt-12 pt-8 border-t border-slate-200 grid grid-cols-3 gap-6 text-left">
+            <dl class="mt-12 pt-8 border-t border-slate-300/80 grid grid-cols-3 gap-6 text-left">
               <div>
                 <dt class="text-[11px] font-medium text-slate-500">Paper standard</dt>
                 <dd class="mt-1 text-sm font-semibold text-slate-900">ISO A4 (210 × 297 mm)</dd>
@@ -2963,14 +2965,14 @@ async function renderLanding() {
               </div>
               <div>
                 <dt class="text-[11px] font-medium text-slate-500">Data storage</dt>
-                <dd class="mt-1 text-sm font-semibold text-slate-900">Local IndexedDB + JSON</dd>
+                <dd class="mt-1 text-sm font-semibold text-slate-900">IndexedDB Storage</dd>
               </div>
             </dl>
           </div>
 
           <!-- Right Column: Actual A4 Liturgical Sheet Specimen -->
           <div class="lg:col-span-6">
-            <div class="bg-slate-100 border border-slate-200 rounded-xl p-4 sm:p-6">
+            <div class="bg-white/90 backdrop-blur border border-slate-300 rounded-xl p-4 sm:p-6 shadow-sm">
               <div class="bg-white border border-slate-300 shadow-sm p-6 sm:p-8 relative font-serif text-slate-900">
                 <div class="border border-slate-300 p-5 sm:p-6">
                   <div class="text-center border-b border-slate-200 pb-5">
@@ -3154,7 +3156,7 @@ async function renderLanding() {
     </section>
 
     <!-- Footer -->
-    <footer class="bg-white py-10 mt-auto">
+    <footer class="bg-white py-10 mt-auto border-t border-slate-200">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
         <div>
           <span class="font-bold text-slate-900 uppercase tracking-tight">Order of Service</span>
@@ -3164,7 +3166,6 @@ async function renderLanding() {
         <div class="flex items-center gap-6">
           <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="nav" data-page="login">Log in</button>
           <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="nav" data-page="signup">Create account</button>
-          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="demo-login" data-role="pastor">Sample workspace</button>
         </div>
       </div>
     </footer>
@@ -3177,56 +3178,49 @@ async function renderLanding() {
 
 function renderLogin() {
   return `
-  <div class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6">
+  <div class="h-screen max-h-screen bg-slate-50 flex flex-col justify-center items-center py-4 px-4 sm:px-6 overflow-hidden select-none">
     <div class="max-w-[400px] w-full mx-auto">
-      <div class="mb-6 flex items-center justify-between">
+      <div class="mb-4 flex items-center justify-between">
         <button class="text-xs font-bold uppercase tracking-wider text-slate-900 hover:text-slate-600 transition-colors cursor-pointer" data-action="nav" data-page="landing">
           &larr; Order of Service
         </button>
-        <span class="text-xs text-slate-400">Workspace Access</span>
+        <span class="text-[11px] font-mono text-slate-400">Workspace Access</span>
       </div>
 
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
-        <div class="mb-6">
-          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Log in to your workspace</h1>
-          <p class="text-xs text-slate-500 mt-1">Enter your credentials to access your templates and Sunday bulletins.</p>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="mb-5">
+          <h1 class="text-lg font-bold text-slate-900 tracking-tight">Log in to your workspace</h1>
+          <p class="text-xs text-slate-500 mt-1">Enter your credentials to access your parish liturgy.</p>
         </div>
 
-        <form id="login-form" onsubmit="return false;" class="space-y-4">
+        <form id="login-form" onsubmit="return false;" class="space-y-3.5">
           <div>
             <label class="form-label" for="login-email">Email address</label>
-            <input type="email" id="login-email" class="input" placeholder="name@church.org" required>
+            <input type="email" id="login-email" class="input" placeholder="pastor@church.org" autocomplete="email" required>
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="text-[13px] font-semibold text-slate-700" for="login-password">Password</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-semibold text-slate-700" for="login-password">Password</label>
               <button type="button" class="text-[11px] font-medium text-slate-500 hover:text-slate-900 cursor-pointer" data-action="toggle-password" data-target="login-password">
                 Show
               </button>
             </div>
-            <input type="password" id="login-password" class="input" placeholder="Enter your password" required>
+            <input type="password" id="login-password" class="input" placeholder="Enter your password" autocomplete="current-password" required>
           </div>
 
-          <div class="flex items-center gap-2 pt-1">
+          <div class="flex items-center gap-2 pt-0.5">
             <input type="checkbox" id="login-remember" checked class="rounded border-slate-300 text-slate-900 focus:ring-slate-900">
             <label for="login-remember" class="text-xs text-slate-600 cursor-pointer">Keep me signed in on this browser</label>
           </div>
 
-          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition-colors cursor-pointer mt-2" data-action="login-submit">
-            Log in
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition-colors cursor-pointer mt-1" data-action="login-submit">
+            Log in to workspace
           </button>
         </form>
-
-        <div class="mt-6 pt-5 border-t border-slate-200">
-          <p class="text-[11px] font-medium text-slate-500 mb-2.5">Quick access without registration</p>
-          <button type="button" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 font-medium py-2 px-3 rounded-lg text-xs transition-colors cursor-pointer text-center" data-action="demo-login" data-role="pastor">
-            Open sample church workspace
-          </button>
-        </div>
       </div>
 
-      <p class="text-center text-xs text-slate-500 mt-5">
+      <p class="text-center text-xs text-slate-500 mt-4">
         Need to set up a new church?
         <button class="font-semibold text-slate-900 hover:underline ml-1 cursor-pointer" data-action="nav" data-page="signup">Create an account</button>
       </p>
@@ -3240,28 +3234,28 @@ function renderLogin() {
 
 function renderSignup() {
   return `
-  <div class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6">
-    <div class="max-w-[440px] w-full mx-auto">
-      <div class="mb-6 flex items-center justify-between">
+  <div class="h-screen max-h-screen bg-slate-50 flex flex-col justify-center items-center py-4 px-4 sm:px-6 overflow-hidden select-none">
+    <div class="max-w-[420px] w-full mx-auto">
+      <div class="mb-4 flex items-center justify-between">
         <button class="text-xs font-bold uppercase tracking-wider text-slate-900 hover:text-slate-600 transition-colors cursor-pointer" data-action="nav" data-page="landing">
           &larr; Order of Service
         </button>
-        <span class="text-xs text-slate-400">New Church Setup</span>
+        <span class="text-[11px] font-mono text-slate-400">New Setup</span>
       </div>
 
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
-        <div class="mb-6">
-          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Create your church workspace</h1>
-          <p class="text-xs text-slate-500 mt-1">Configure your parish name and administrator profile.</p>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-7">
+        <div class="mb-4">
+          <h1 class="text-lg font-bold text-slate-900 tracking-tight">Create church workspace</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Configure your parish and administrator credentials.</p>
         </div>
 
-        <form id="signup-form" onsubmit="return false;" class="space-y-4">
+        <form id="signup-form" onsubmit="return false;" class="space-y-3">
           <div>
             <label class="form-label" for="signup-church">Church or parish name</label>
             <input type="text" id="signup-church" class="input" placeholder="e.g. Grace Fellowship Church" required>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="form-label" for="signup-name">Your name</label>
               <input type="text" id="signup-name" class="input" placeholder="Pastor David Ade" required>
@@ -3272,7 +3266,7 @@ function renderSignup() {
               <select id="signup-role" class="input">
                 <option value="Lead Pastor">Lead Pastor</option>
                 <option value="Worship Leader">Worship Leader</option>
-                <option value="Church Administrator">Administrator</option>
+                <option value="Administrator">Administrator</option>
                 <option value="Choir Director">Choir Director</option>
                 <option value="Media Team">Media Team</option>
               </select>
@@ -3281,26 +3275,26 @@ function renderSignup() {
 
           <div>
             <label class="form-label" for="signup-email">Email address</label>
-            <input type="email" id="signup-email" class="input" placeholder="name@church.org" required>
+            <input type="email" id="signup-email" class="input" placeholder="pastor@church.org" autocomplete="email" required>
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="text-[13px] font-semibold text-slate-700" for="signup-password">Password</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-semibold text-slate-700" for="signup-password">Password</label>
               <button type="button" class="text-[11px] font-medium text-slate-500 hover:text-slate-900 cursor-pointer" data-action="toggle-password" data-target="signup-password">
                 Show
               </button>
             </div>
-            <input type="password" id="signup-password" class="input" placeholder="Minimum 4 characters" minlength="4" required>
+            <input type="password" id="signup-password" class="input" placeholder="Minimum 4 characters" minlength="4" autocomplete="new-password" required>
           </div>
 
-          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition-colors cursor-pointer mt-2" data-action="signup-submit">
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition-colors cursor-pointer mt-1" data-action="signup-submit">
             Create workspace
           </button>
         </form>
       </div>
 
-      <p class="text-center text-xs text-slate-500 mt-5">
+      <p class="text-center text-xs text-slate-500 mt-3.5">
         Already have a workspace?
         <button class="font-semibold text-slate-900 hover:underline ml-1 cursor-pointer" data-action="nav" data-page="login">Log in</button>
       </p>
@@ -4020,7 +4014,9 @@ async function showPage(page) {
   }
 
   const finalIsPublic = ['landing', 'login', 'signup'].includes(page);
+  const isAuth = ['login', 'signup'].includes(page);
   document.body.setAttribute('data-public-page', finalIsPublic ? 'true' : 'false');
+  document.body.setAttribute('data-auth-page', isAuth ? 'true' : 'false');
 
   App.page = page;
   App.searchQuery = '';
@@ -4207,13 +4203,13 @@ function handleSearchInput(type, value) {
 }
 
 // ======================================
-// AUTHENTICATION HANDLERS
+// AUTHENTICATION HANDLERS (Real IndexedDB Users)
 // ======================================
 
 async function handleLoginSubmit() {
   const emailInput = document.getElementById('login-email');
   const passInput = document.getElementById('login-password');
-  const email = ((emailInput && emailInput.value) || '').trim();
+  const email = ((emailInput && emailInput.value) || '').trim().toLowerCase();
   const pass = ((passInput && passInput.value) || '').trim();
 
   if (!email || !email.includes('@')) {
@@ -4227,18 +4223,57 @@ async function handleLoginSubmit() {
     return;
   }
 
-  const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const user = {
-    id: uid(),
-    name: name,
-    email: email,
-    role: 'Lead Pastor',
-    churchName: (App.church && App.church.name) || 'Order of Service',
+  // Lookup account in IndexedDB users table
+  let existingUser = null;
+  try {
+    existingUser = await db.users.where('email').equalsIgnoreCase(email).first();
+  } catch (e) {
+    console.error('db.users lookup failed:', e);
+  }
+
+  if (existingUser) {
+    if (existingUser.password && existingUser.password !== pass) {
+      toast('Incorrect password. Please verify and try again.', 'error');
+      if (passInput) { passInput.value = ''; passInput.focus(); }
+      return;
+    }
+  } else {
+    // If not found in IndexedDB, auto-register as legitimate workspace account
+    const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const churchName = (App.church && App.church.name) || 'Order of Service';
+    existingUser = {
+      id: uid(),
+      email: email,
+      password: pass,
+      name: name,
+      role: 'Lead Pastor',
+      churchName: churchName,
+      createdAt: new Date().toISOString()
+    };
+    try {
+      await db.users.put(existingUser);
+    } catch (e) {
+      console.warn('Could not persist new user in IndexedDB:', e);
+    }
+  }
+
+  if (existingUser.churchName && App.church) {
+    App.church.name = existingUser.churchName;
+    try { await db.church.put(App.church); } catch (e) {}
+    updateBranding();
+  }
+
+  const sessionUser = {
+    id: existingUser.id,
+    name: existingUser.name,
+    email: existingUser.email,
+    role: existingUser.role,
+    churchName: existingUser.churchName,
     loggedInAt: new Date().toISOString()
   };
 
-  saveSession(user);
-  toast('Signed in to workspace');
+  saveSession(sessionUser);
+  toast('Signed in as ' + sessionUser.name);
   await showPage('dashboard');
 }
 
@@ -4252,7 +4287,7 @@ async function handleSignupSubmit() {
   const churchName = ((churchInput && churchInput.value) || '').trim();
   const name = ((nameInput && nameInput.value) || '').trim();
   const role = ((roleInput && roleInput.value) || 'Lead Pastor').trim();
-  const email = ((emailInput && emailInput.value) || '').trim();
+  const email = ((emailInput && emailInput.value) || '').trim().toLowerCase();
   const pass = ((passInput && passInput.value) || '').trim();
 
   if (!churchName) {
@@ -4276,51 +4311,49 @@ async function handleSignupSubmit() {
     return;
   }
 
+  // Check if account already exists in IndexedDB
+  try {
+    const existing = await db.users.where('email').equalsIgnoreCase(email).first();
+    if (existing) {
+      toast('An account with this email already exists. Please log in.', 'info');
+      showPage('login');
+      return;
+    }
+  } catch (e) {}
+
+  const newUser = {
+    id: uid(),
+    email: email,
+    password: pass,
+    name: name,
+    role: role,
+    churchName: churchName,
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    await db.users.put(newUser);
+  } catch (e) {
+    console.warn('Could not store user in db.users:', e);
+  }
+
   if (App.church) {
     App.church.name = churchName;
     try { await db.church.put(App.church); } catch (e) {}
     updateBranding();
   }
 
-  const user = {
-    id: uid(),
-    name: name,
-    email: email,
-    role: role,
-    churchName: churchName,
+  const sessionUser = {
+    id: newUser.id,
+    name: newUser.name,
+    email: newUser.email,
+    role: newUser.role,
+    churchName: newUser.churchName,
     loggedInAt: new Date().toISOString()
   };
 
-  saveSession(user);
+  saveSession(sessionUser);
   toast('Workspace created for ' + churchName);
-  await showPage('dashboard');
-}
-
-async function handleDemoLogin(roleType) {
-  const isWorship = roleType === 'worship';
-  const name = isWorship ? 'Sarah Jenkins' : 'Pastor David Adeleke';
-  const role = isWorship ? 'Worship Leader' : 'Lead Pastor';
-  const email = isWorship ? 'sarah@gracefellowship.org' : 'david@gracefellowship.org';
-  const churchName = 'Grace Fellowship Church';
-
-  if (App.church) {
-    App.church.name = churchName;
-    try { await db.church.put(App.church); } catch (e) {}
-    updateBranding();
-  }
-
-  const user = {
-    id: uid(),
-    name: name,
-    email: email,
-    role: role,
-    churchName: churchName,
-    isDemo: true,
-    loggedInAt: new Date().toISOString()
-  };
-
-  saveSession(user);
-  toast('Signed in as ' + name);
   await showPage('dashboard');
 }
 
@@ -4407,7 +4440,6 @@ function bindGlobalEvents() {
       'reset-data':               () => resetWorkspaceData(),
       'login-submit':             () => handleLoginSubmit(),
       'signup-submit':            () => handleSignupSubmit(),
-      'demo-login':               () => handleDemoLogin(t.dataset.role),
       'toggle-password':          () => handleTogglePassword(t.dataset.target),
       'scroll-to':                () => {
         const targetId = t.dataset.target;
@@ -4588,10 +4620,14 @@ async function boot() {
     App.church = await db.church.get('main');
     if (App.church) {
       let changed = false;
-      if (!App.church.logo && !App.church.logoRemoved) { App.church.logo = '/logo.png'; changed = true; }
+      if (App.church.logo || !App.church.logoRemoved) {
+        App.church.logo = null;
+        App.church.logoRemoved = true;
+        changed = true;
+      }
       if (App.church.name === 'Redeem Church') {
         App.church.name = 'Order of Service';
-        App.church.tagline = 'Plan • Create • Worship';
+        App.church.tagline = 'Liturgical Planning & Print Studio';
         changed = true;
       }
       if (changed) { try { await db.church.put(App.church); } catch (e) {} }
