@@ -1383,7 +1383,7 @@ function renderSettings() {
       <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="form-label" for="set-name">Church Name</label>
-          <input id="set-name" class="input font-semibold" data-setting="name" value="${esc(c.name || '')}" maxlength="60" placeholder="Redeem Church">
+          <input id="set-name" class="input font-semibold" data-setting="name" value="${esc(c.name || '')}" maxlength="60" placeholder="Grace Fellowship Church">
         </div>
         <div>
           <label class="form-label" for="set-tagline">Motto / Tagline <span class="text-slate-400 font-normal">(optional)</span></label>
@@ -1408,11 +1408,11 @@ function renderSettings() {
           </div>
           <div>
             <label class="form-label" for="set-email">Email</label>
-            <input id="set-email" class="input" data-setting="email" value="${esc(c.email || '')}" maxlength="80" placeholder="hello@redeemchurch.org">
+            <input id="set-email" class="input" data-setting="email" value="${esc(c.email || '')}" maxlength="80" placeholder="hello@church.org">
           </div>
           <div>
             <label class="form-label" for="set-website">Website</label>
-            <input id="set-website" class="input" data-setting="website" value="${esc(c.website || '')}" maxlength="80" placeholder="www.redeemchurch.org">
+            <input id="set-website" class="input" data-setting="website" value="${esc(c.website || '')}" maxlength="80" placeholder="www.church.org">
           </div>
         </div>
       </div>
@@ -2213,7 +2213,7 @@ async function openSavedService(id) {
 function renderDocHtml(service, church, theme, editable = false) {
   church = church || {};
   const P = docParams(theme, church);
-  const name = church.name || 'Redeem Church';
+  const name = church.name || 'Order of Service';
   const initials = initialsOf(name);
   const dateTxt = service.date ? fmtLongDate(service.date) : '';
   const themeTxt = String(service.theme || '').trim();
@@ -2342,7 +2342,7 @@ function drawPdfHeader(doc, P, church, service, logo) {
   doc.setFont(P.hf, 'bold');
   doc.setFontSize(P.nameSize);
   doc.setTextColor(23, 23, 23);
-  const name = church.name || 'Redeem Church';
+  const name = church.name || 'Order of Service';
   const nameGap = 0.9;
   const nameW = spacedWidth(doc, name, nameGap);
   if (nameW > maxW) {
@@ -2463,7 +2463,7 @@ function drawPdfItem(doc, it, y, P) {
 
 function drawPdfFooter(doc, P, church, pageNo, total) {
   const W = 210, MX = 24;
-  const name = church.name || 'Redeem Church';
+  const name = church.name || 'Order of Service';
   const website = String(church.website || '').trim();
   if (P.footerStyle === 'classic') {
     doc.setFont(P.bf, 'normal'); doc.setFontSize(8.5);
@@ -2542,9 +2542,9 @@ async function generateServicePdf(service, church, theme) {
 }
 
 function pdfFileName(service, church) {
-  const name = sanitizeFile(church.name || 'Redeem Church');
+  const name = sanitizeFile(church.name || 'Order-of-Service');
   const date = service.date || isoOf(new Date());
-  return name + '-Order-of-Service-' + date + '.pdf';
+  return name + '-Bulletin-' + date + '.pdf';
 }
 
 function brandingSnapshot(church) {
@@ -3501,12 +3501,12 @@ function miniPaperHtml(theme, church) {
     : theme.borderStyle === 'line' ? '<div class="pm-topbar"></div>' : '';
   const footerTxt = theme.footerStyle === 'minimal'
     ? 'ORDER OF SERVICE'
-    : esc(String((church && church.website) || (church && church.name) || 'Redeem Church').slice(0, 24));
+    : esc(String((church && church.website) || (church && church.name) || 'Order of Service').slice(0, 24));
   return `
   <div class="paper-mini" style="--primary:${primary};--hf:${hf};--bf:${bf}">
     ${chrome}
-    <div class="pm-logo">${esc(initialsOf((church && church.name) || 'R'))}</div>
-    <div class="pm-name">${esc(String((church && church.name) || 'Redeem Church').slice(0, 22))}</div>
+    <div class="pm-logo">${esc(initialsOf((church && church.name) || 'OS'))}</div>
+    <div class="pm-name">${esc(String((church && church.name) || 'Order of Service').slice(0, 22))}</div>
     <div class="pm-sub">ORDER OF SERVICE</div>
     <div class="pm-rule"></div>
     <div class="pm-item"><div class="pm-item-title">Opening Prayer</div><div class="pm-item-person"></div></div>
@@ -3783,7 +3783,7 @@ async function handleBackupFile(file) {
       if (!c || typeof c !== 'object') return null;
       return {
         id: String(c.id || 'main'),
-        name: String(c.name || 'Redeem Church').slice(0, 100),
+        name: String(c.name || 'Order of Service').slice(0, 100),
         tagline: String(c.tagline || '').slice(0, 120),
         address: String(c.address || '').slice(0, 200),
         phone: String(c.phone || '').slice(0, 50),
