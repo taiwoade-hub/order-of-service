@@ -663,39 +663,22 @@ select.input {
 }
 
 /* ============================================================
-   Landing Page & Modern Auth Styles
+   Public Page Layout Isolation (Landing, Login, Signup)
    ============================================================ */
-.landing-hero-bg {
-  background: radial-gradient(circle at 50% 0%, rgba(30, 58, 138, 0.08) 0%, rgba(248, 249, 250, 0) 65%),
-              linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%);
+body[data-public-page="true"] #desktop-sidebar,
+body[data-public-page="true"] #mobile-header,
+body[data-public-page="true"] #bottom-nav,
+body[data-public-page="true"] #drawer,
+body[data-public-page="true"] #drawer-backdrop {
+  display: none !important;
 }
-.landing-glow {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(30, 58, 138, 0.12) 0%, rgba(217, 119, 6, 0.05) 50%, transparent 70%);
-  filter: blur(60px);
-  pointer-events: none;
-  z-index: 0;
+body[data-public-page="true"] #main-content {
+  padding-left: 0 !important;
 }
-.gradient-text {
-  background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 45%, #B45309 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.gradient-badge {
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.08) 0%, rgba(217, 119, 6, 0.08) 100%);
-  border: 1px solid rgba(30, 58, 138, 0.15);
-}
-.auth-bg {
-  background: radial-gradient(circle at 50% 20%, rgba(30, 58, 138, 0.07) 0%, rgba(248, 249, 250, 0) 70%), #F8F9FA;
-}
-.feature-card {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+body[data-public-page="true"] #view {
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 </style>
 
@@ -723,7 +706,7 @@ tailwind.config = {
 </script>
 </head>
 
-<body class="antialiased">
+<body class="antialiased" data-public-page="true">
 
 <!-- ==================== Loading screen ==================== -->
 <div id="loading-screen" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center gap-5 transition-opacity duration-300">
@@ -1017,7 +1000,6 @@ const NAV_ITEMS = [
   { id: 'themes',      label: 'Themes',             icon: 'palette' },
   { id: 'settings',    label: 'Church Settings',    icon: 'settings' },
   { id: 'account',     label: 'Account & Backup',   icon: 'user' },
-  { id: 'landing',     label: 'Landing Page',       icon: 'globe' },
 ];
 const BOTTOM_NAV = ['dashboard', 'templates', 'newService', 'history', 'settings'];
 const NAV_PARENT = { templateEditor: 'templates', serviceEditor: 'sundays' };
@@ -2901,542 +2883,292 @@ function updateUserUI() {
 // ======================================
 
 async function renderLanding() {
-  const [templatesCount, servicesCount] = await Promise.all([
-    db.templates.count(),
-    db.services.count()
-  ]);
-
   return `
-  <!-- Top Landing Navigation -->
-  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 transition-all">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3 cursor-pointer" data-action="nav" data-page="landing">
-        <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shadow-xs">
-          <img src="/logo-icon.png" alt="Order of Service" class="w-full h-full object-contain">
-        </div>
-        <div>
-          <span class="text-sm font-extrabold tracking-wide uppercase text-slate-900 block leading-tight">Order of Service</span>
-          <span class="text-[10px] text-slate-500 font-medium tracking-wide block">Liturgical Studio &amp; Print Publisher</span>
-        </div>
-      </div>
-      
-      <div class="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600">
-        <button class="hover:text-blue-900 transition-colors" data-action="scroll-to" data-target="landing-features">Features</button>
-        <button class="hover:text-blue-900 transition-colors" data-action="scroll-to" data-target="landing-blueprints">Blueprints</button>
-        <button class="hover:text-blue-900 transition-colors" data-action="scroll-to" data-target="landing-pdf">PDF &amp; Print</button>
-        <button class="hover:text-blue-900 transition-colors" data-action="scroll-to" data-target="landing-themes">Themes</button>
-        <button class="hover:text-blue-900 transition-colors" data-action="scroll-to" data-target="landing-pricing">Pricing</button>
-      </div>
-
-      <div class="flex items-center gap-2.5">
-        ${App.user ? `
-          <button class="btn btn-ghost text-xs py-1.5 px-3 border border-slate-200 hidden sm:inline-flex" data-action="sign-out">
-            <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-500"></i>Sign Out
-          </button>
-          <button class="btn btn-primary text-xs py-2 px-4 shadow-sm" data-action="nav" data-page="dashboard">
-            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard
-          </button>
-        ` : `
-          <button class="btn btn-ghost text-xs py-1.5 px-3 border border-slate-200" data-action="nav" data-page="login">
-            <i data-lucide="log-in" class="w-3.5 h-3.5 text-slate-500"></i>Sign In
-          </button>
-          <button class="btn btn-primary text-xs py-2 px-4 shadow-sm" data-action="nav" data-page="signup">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>Get Started Free
-          </button>
-        `}
-      </div>
-    </div>
-  </nav>
-
-  <!-- Hero Section -->
-  <section class="relative overflow-hidden landing-hero-bg pt-12 sm:pt-16 pb-20 border-b border-slate-200">
-    <div class="landing-glow top-0 left-1/2 -translate-x-1/2"></div>
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full gradient-badge text-blue-950 text-xs font-semibold mb-6 shadow-xs">
-        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
-        <span>Liturgical Studio 2.0 • Weekly Liturgy &amp; Bulletins</span>
-      </div>
-      
-      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-        Plan Inspiring Worship Services.<br>
-        <span class="gradient-text">Publish Flawless Bulletins in Minutes.</span>
-      </h1>
-      
-      <p class="mt-5 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto font-normal leading-relaxed">
-        The complete worship planning platform for pastors, worship directors, and church teams. Craft seamless Sunday service orders, assign ministers, and export vector-crisp A4 bulletins ready for print or mobile screens.
-      </p>
-      
-      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-        ${App.user ? `
-          <button class="btn btn-primary py-3 px-6 text-sm shadow-md rounded-xl w-full sm:w-auto" data-action="nav" data-page="dashboard">
-            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>Go to Workspace Dashboard
-          </button>
-        ` : `
-          <button class="btn btn-primary py-3 px-6 text-sm shadow-md rounded-xl w-full sm:w-auto" data-action="nav" data-page="signup">
-            <i data-lucide="sparkles" class="w-4 h-4"></i>Start Planning Free
-          </button>
-          <button class="btn btn-ghost py-3 px-5 text-sm rounded-xl border border-slate-300 w-full sm:w-auto" data-action="demo-login" data-role="pastor">
-            <i data-lucide="play" class="w-4 h-4 text-blue-900 fill-blue-900"></i>Try Interactive Demo
-          </button>
-        `}
-      </div>
-
-      <!-- Trust Indicators -->
-      <div class="mt-8 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs font-medium text-slate-500">
-        <span class="flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>100% Free Forever</span>
-        <span class="flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>Offline-Ready IndexedDB</span>
-        <span class="flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>Vector A4 Print Precision</span>
-        <span class="flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>No Credit Card Required</span>
-      </div>
-    </div>
-
-    <!-- Hero Interactive Mockup Showcase -->
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 relative z-10">
-      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xl overflow-hidden">
-        <div class="bg-slate-100/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-red-400"></div>
-            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
-            <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
-            <span class="text-xs font-mono text-slate-500 ml-2">orderofservice.app — Sunday Liturgy &amp; Live Bulletin Publisher</span>
-          </div>
-          <span class="chip chip-navy text-[10px]">A4 Vector Print</span>
-        </div>
-        
-        <div class="p-5 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50/50">
-          <div class="lg:col-span-7 space-y-3">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-200">
-              <div>
-                <p class="text-xs font-bold text-blue-900 uppercase tracking-wider">Sunday Morning Liturgy</p>
-                <h3 class="text-base font-bold text-slate-900">Holy Communion &amp; Thanksgiving Service</h3>
-              </div>
-              <span class="chip text-[11px] font-semibold">Live Preview</span>
-            </div>
-            
-            <div class="space-y-2 text-xs">
-              <div class="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-3">
-                  <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-900 flex items-center justify-center font-bold text-[10px]">1</span>
-                  <div>
-                    <p class="font-bold text-slate-900">Call to Worship</p>
-                    <p class="text-[11px] text-slate-500">Psalm 100 — Enter His gates with thanksgiving</p>
-                  </div>
-                </div>
-                <span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Pastor David</span>
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-3">
-                  <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-900 flex items-center justify-center font-bold text-[10px]">2</span>
-                  <div>
-                    <p class="font-bold text-slate-900">Hymn of Praise</p>
-                    <p class="text-[11px] text-slate-500">Hymn #104 — O Worship the King, All Glorious Above</p>
-                  </div>
-                </div>
-                <span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Choir &amp; Congregation</span>
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-3">
-                  <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-900 flex items-center justify-center font-bold text-[10px]">3</span>
-                  <div>
-                    <p class="font-bold text-slate-900">Scripture Reading</p>
-                    <p class="text-[11px] text-slate-500">Colossians 3:12-17 — Clothed in Love &amp; Peace</p>
-                  </div>
-                </div>
-                <span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Elder Sarah</span>
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-3">
-                  <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-900 flex items-center justify-center font-bold text-[10px]">4</span>
-                  <div>
-                    <p class="font-bold text-slate-900">Pastoral Sermon</p>
-                    <p class="text-[11px] text-slate-500">Walking in Unshakable Faith</p>
-                  </div>
-                </div>
-                <span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Lead Pastor</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="lg:col-span-5 flex flex-col items-center justify-center">
-            <div class="w-full max-w-[270px] bg-white rounded-lg border-2 border-slate-200 shadow-md p-4 text-center font-serif text-[10px] leading-tight relative">
-              <div class="absolute inset-1.5 border border-slate-300 rounded pointer-events-none opacity-60"></div>
-              <div class="w-7 h-7 mx-auto rounded-md bg-blue-900 text-white flex items-center justify-center font-bold text-xs mb-2">†</div>
-              <p class="font-bold text-xs uppercase tracking-widest text-slate-900">Order of Service</p>
-              <p class="italic text-[9px] text-slate-500 mt-0.5">Grace Community Church</p>
-              <div class="border-t border-slate-300 my-2"></div>
-              <div class="space-y-1.5 text-left text-[9px]">
-                <div class="flex justify-between font-sans"><span class="font-semibold text-slate-800">Call to Worship</span><span class="text-slate-500">Pastor David</span></div>
-                <div class="flex justify-between font-sans"><span class="font-semibold text-slate-800">Opening Hymn #104</span><span class="text-slate-500">Choir</span></div>
-                <div class="flex justify-between font-sans"><span class="font-semibold text-slate-800">Scripture Reading</span><span class="text-slate-500">Col. 3:12</span></div>
-                <div class="flex justify-between font-sans"><span class="font-semibold text-slate-800">Pastoral Sermon</span><span class="text-slate-500">Lead Pastor</span></div>
-                <div class="flex justify-between font-sans"><span class="font-semibold text-slate-800">Holy Communion</span><span class="text-slate-500">Ministers</span></div>
-                <div class="flex justify-between font-sans"><span class="font-semibold text-slate-800">Benediction</span><span class="text-slate-500">All</span></div>
-              </div>
-              <div class="border-t border-slate-300 my-2"></div>
-              <p class="text-[8px] text-slate-500 italic">"The Lord Bless You and Keep You"</p>
-            </div>
-            <p class="text-[11px] text-slate-500 mt-3 font-medium">Automatic A4 print layout generated in real-time</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section id="landing-features" class="py-20 bg-white border-b border-slate-200">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center max-w-2xl mx-auto mb-14">
-        <span class="chip chip-navy text-xs font-semibold uppercase tracking-wider">Engineered for Church Teams</span>
-        <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
-          Everything You Need for Peaceful Sunday Mornings
-        </h2>
-        <p class="text-sm sm:text-base text-slate-600 mt-3">
-          Eliminate last-minute Word formatting errors, misaligned bulletin margins, and confusion over minister roles.
-        </p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="card p-6 feature-card">
-          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 border border-blue-100 flex items-center justify-center mb-4">
-            <i data-lucide="layout-list" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Drag &amp; Drop Liturgy Builder</h3>
-          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-            Easily arrange service items in order. Move hymns, scripture passages, communion, and announcements with instant live preview.
-          </p>
-        </div>
-
-        <div class="card p-6 feature-card">
-          <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-900 border border-indigo-100 flex items-center justify-center mb-4">
-            <i data-lucide="palette" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Parametric Typography &amp; Themes</h3>
-          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-            Switch effortlessly between Classic Liturgical, Modern Clean, and Contemporary Minimalist styling with custom church accent colors.
-          </p>
-        </div>
-
-        <div class="card p-6 feature-card">
-          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-900 border border-amber-100 flex items-center justify-center mb-4">
-            <i data-lucide="printer" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Pixel-Perfect Vector A4 PDF</h3>
-          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-            Direct vector generation via jsPDF ensures clean, crisp typography on commercial copiers, church printers, or mobile digital bulletins.
-          </p>
-        </div>
-
-        <div class="card p-6 feature-card">
-          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-100 flex items-center justify-center mb-4">
-            <i data-lucide="layout-template" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Reusable Liturgy Blueprints</h3>
-          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-            Save your best service flows as reusable templates for standard Sundays, baptismal services, Christmas Eve, Easter, and youth nights.
-          </p>
-        </div>
-
-        <div class="card p-6 feature-card">
-          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-900 border border-purple-100 flex items-center justify-center mb-4">
-            <i data-lucide="users" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Minister Role Assignments</h3>
-          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-            Assign specific liturgical tasks to Pastors, Worship Ministers, Readers, and Deacons so everyone knows their role at a glance.
-          </p>
-        </div>
-
-        <div class="card p-6 feature-card">
-          <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-900 border border-rose-100 flex items-center justify-center mb-4">
-            <i data-lucide="shield-check" class="w-5 h-5"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-900">Local-First Privacy &amp; Backups</h3>
-          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-            Your church data stays private in your browser's IndexedDB. Export one-click JSON archives for effortless backup and offline portability.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Blueprints Section -->
-  <section id="landing-blueprints" class="py-20 bg-slate-50 border-b border-slate-200">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div>
-          <span class="chip chip-navy text-xs font-semibold uppercase tracking-wider">Fast-Start Templates</span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
-            Pre-Built Blueprints for Every Occasion
-          </h2>
-          <p class="text-sm text-slate-600 mt-2">Choose a starter liturgy and customize it in seconds.</p>
-        </div>
-        <button class="btn btn-ghost text-xs border border-slate-200 self-start md:self-auto" data-action="nav" data-page="templates">
-          Explore All Blueprints <i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>
+  <div class="min-h-screen bg-white text-slate-900 flex flex-col">
+    <!-- Top Header -->
+    <header class="border-b border-slate-200 bg-white sticky top-0 z-40">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <button class="text-left flex items-center gap-3 cursor-pointer" data-action="nav" data-page="landing">
+          <span class="text-sm font-bold tracking-tight text-slate-900 uppercase">Order of Service</span>
+          <span class="hidden sm:inline-block text-slate-300">/</span>
+          <span class="hidden sm:inline-block text-xs text-slate-500">Liturgical Planner &amp; A4 Print Studio</span>
         </button>
-      </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="card p-6 flex flex-col justify-between">
-          <div>
-            <span class="chip text-[10px] font-bold">Standard Weekly</span>
-            <h3 class="text-base font-bold text-slate-900 mt-3">Sunday Worship Celebration</h3>
-            <p class="text-xs text-slate-500 mt-1">Opening Prayer, Worship Set, Announcements, Scripture, Sermon, Benediction.</p>
-            <div class="mt-4 pt-4 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-              <div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-blue-900"></i><span>8 liturgical steps</span></div>
-              <div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-blue-900"></i><span>Pre-configured minister roles</span></div>
-            </div>
-          </div>
-          <button class="btn btn-primary w-full mt-6 text-xs" data-action="nav" data-page="signup">Use This Blueprint</button>
-        </div>
+        <nav class="hidden md:flex items-center gap-8 text-xs font-medium text-slate-600">
+          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="scroll-to" data-target="landing-workflow">How it works</button>
+          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="scroll-to" data-target="landing-blueprints">Templates</button>
+          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="scroll-to" data-target="landing-print">Print spec</button>
+        </nav>
 
-        <div class="card p-6 flex flex-col justify-between border-blue-900/40 shadow-sm">
-          <div>
-            <div class="flex items-center justify-between">
-              <span class="chip chip-navy text-[10px] font-bold">Communion Sunday</span>
-              <span class="text-[10px] font-bold text-amber-700 uppercase">Popular</span>
-            </div>
-            <h3 class="text-base font-bold text-slate-900 mt-3">Holy Communion &amp; Thanksgiving</h3>
-            <p class="text-xs text-slate-500 mt-1">Call to the Lord's Table, Words of Institution, Distribution, Prayer of Thanksgiving.</p>
-            <div class="mt-4 pt-4 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-              <div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-blue-900"></i><span>10 liturgical steps</span></div>
-              <div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-blue-900"></i><span>Full Eucharistic order</span></div>
-            </div>
-          </div>
-          <button class="btn btn-primary w-full mt-6 text-xs" data-action="nav" data-page="signup">Use This Blueprint</button>
-        </div>
-
-        <div class="card p-6 flex flex-col justify-between">
-          <div>
-            <span class="chip text-[10px] font-bold">Evening Liturgy</span>
-            <h3 class="text-base font-bold text-slate-900 mt-3">Evensong &amp; Evening Vespers</h3>
-            <p class="text-xs text-slate-500 mt-1">Light Service, Psalms of Praise, Choral Anthem, Evening Collect, Quiet Intercession.</p>
-            <div class="mt-4 pt-4 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-              <div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-blue-900"></i><span>7 liturgical steps</span></div>
-              <div class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-blue-900"></i><span>Reflective contemplative layout</span></div>
-            </div>
-          </div>
-          <button class="btn btn-primary w-full mt-6 text-xs" data-action="nav" data-page="signup">Use This Blueprint</button>
+        <div class="flex items-center gap-2.5">
+          ${App.user ? `
+            <button class="text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-2 cursor-pointer" data-action="sign-out">Sign out</button>
+            <button class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="dashboard">Open Workspace</button>
+          ` : `
+            <button class="text-xs font-semibold text-slate-700 hover:text-slate-900 px-3.5 py-2 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer" data-action="nav" data-page="login">Log in</button>
+            <button class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="signup">Create account</button>
+          `}
         </div>
       </div>
-    </div>
-  </section>
+    </header>
 
-  <!-- PDF Engine Showcase -->
-  <section id="landing-pdf" class="py-20 bg-white border-b border-slate-200">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <span class="chip chip-navy text-xs font-semibold uppercase tracking-wider">Vector Print Engine</span>
-          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
-            Say Goodbye to Blurry Bulletins &amp; Overflowing Word Margins
-          </h2>
-          <p class="text-sm text-slate-600 mt-4 leading-relaxed">
-            Unlike standard web pages that scramble when printed, Order of Service features a calibrated vector layout engine. Every heading, hymn title, and minister attribution fits precisely into standard A4 dimensions.
-          </p>
-          <div class="mt-6 space-y-3 text-xs text-slate-700">
-            <div class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5"><i data-lucide="check" class="w-3.5 h-3.5"></i></div>
-              <div><strong class="font-bold text-slate-900">Direct A4 Vector Geometry:</strong> Generates crisp 72-point vector PDFs directly from client memory without raster degradation.</div>
-            </div>
-            <div class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5"><i data-lucide="check" class="w-3.5 h-3.5"></i></div>
-              <div><strong class="font-bold text-slate-900">Instant Thermal &amp; Laser Print:</strong> One click opens the native OS print dialogue pre-fitted to standard church paper trays.</div>
-            </div>
-            <div class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5"><i data-lucide="check" class="w-3.5 h-3.5"></i></div>
-              <div><strong class="font-bold text-slate-900">Historical Export Archive:</strong> Every exported bulletin is recorded with thumbnail and re-downloadable anytime.</div>
-            </div>
-          </div>
-          <div class="mt-8">
-            <button class="btn btn-primary py-2.5 px-5 text-xs shadow-sm" data-action="demo-login" data-role="pastor">
-              <i data-lucide="file-down" class="w-4 h-4"></i>Test Live PDF Generator
-            </button>
-          </div>
-        </div>
-
-        <div class="card p-6 bg-slate-50 border-2 border-slate-200">
-          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm text-center">
-            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center mx-auto mb-3">
-              <i data-lucide="printer" class="w-6 h-6"></i>
-            </div>
-            <h4 class="font-bold text-sm text-slate-900">Built for Sunday Morning Speed</h4>
-            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Need a last-minute hymn substitution 15 minutes before the prelude? Edit on your phone or laptop and re-export in 5 seconds.
+    <!-- Editorial Hero & Live Sheet Specimen -->
+    <section class="border-b border-slate-200 bg-white">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-start">
+          
+          <!-- Left Column: Copy & Primary Actions -->
+          <div class="lg:col-span-6 lg:pr-4 pt-2">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Weekly Worship &amp; Bulletin Publishing
             </p>
-            <div class="mt-5 grid grid-cols-3 gap-2 pt-4 border-t border-slate-100 text-center">
+            <h1 class="mt-4 text-3xl sm:text-4xl lg:text-[42px] font-bold tracking-tight text-slate-900 leading-[1.15]">
+              Prepare Sunday service orders and print-ready A4 bulletins.
+            </h1>
+            <p class="mt-5 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
+              A structured workspace for pastors, administrators, and worship leaders. Arrange your weekly liturgy, assign ministers to each hymn or scripture reading, and export cleanly formatted A4 programs without wrestling with word processors.
+            </p>
+
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+              ${App.user ? `
+                <button class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="dashboard">
+                  Continue to Workspace
+                </button>
+              ` : `
+                <button class="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="signup">
+                  Create church workspace
+                </button>
+                <button class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors cursor-pointer" data-action="nav" data-page="login">
+                  Log in
+                </button>
+              `}
+            </div>
+
+            ${!App.user ? `
+            <div class="mt-5">
+              <button class="text-xs font-medium text-slate-500 hover:text-slate-900 underline underline-offset-4 cursor-pointer" data-action="demo-login" data-role="pastor">
+                Or explore the sample workspace without registering
+              </button>
+            </div>
+            ` : ''}
+
+            <dl class="mt-12 pt-8 border-t border-slate-200 grid grid-cols-3 gap-6 text-left">
               <div>
-                <p class="text-lg font-bold text-blue-900">0 ms</p>
-                <p class="text-[10px] text-slate-500 font-medium">Server Latency</p>
+                <dt class="text-[11px] font-medium text-slate-500">Paper standard</dt>
+                <dd class="mt-1 text-sm font-semibold text-slate-900">ISO A4 (210 × 297 mm)</dd>
               </div>
               <div>
-                <p class="text-lg font-bold text-blue-900">100%</p>
-                <p class="text-[10px] text-slate-500 font-medium">Vector Crisp</p>
+                <dt class="text-[11px] font-medium text-slate-500">Output format</dt>
+                <dd class="mt-1 text-sm font-semibold text-slate-900">Vector PDF &amp; Print</dd>
               </div>
               <div>
-                <p class="text-lg font-bold text-blue-900">210×297</p>
-                <p class="text-[10px] text-slate-500 font-medium">Standard A4 mm</p>
+                <dt class="text-[11px] font-medium text-slate-500">Data storage</dt>
+                <dd class="mt-1 text-sm font-semibold text-slate-900">Local IndexedDB + JSON</dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- Right Column: Actual A4 Liturgical Sheet Specimen -->
+          <div class="lg:col-span-6">
+            <div class="bg-slate-100 border border-slate-200 rounded-xl p-4 sm:p-6">
+              <div class="bg-white border border-slate-300 shadow-sm p-6 sm:p-8 relative font-serif text-slate-900">
+                <div class="border border-slate-300 p-5 sm:p-6">
+                  <div class="text-center border-b border-slate-200 pb-5">
+                    <p class="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-slate-400">Sunday Morning Service</p>
+                    <h2 class="mt-1.5 text-lg sm:text-xl font-bold tracking-wide uppercase text-slate-900">Grace Fellowship Church</h2>
+                    <p class="mt-1 text-xs italic text-slate-500">Order of Worship • 10:00 AM</p>
+                  </div>
+
+                  <div class="divide-y divide-slate-100 text-xs font-sans my-4">
+                    <div class="py-2.5 flex items-baseline justify-between gap-4">
+                      <div>
+                        <span class="text-[11px] font-mono text-slate-400 mr-2">01</span>
+                        <span class="font-semibold text-slate-900">Call to Worship &amp; Invocation</span>
+                        <p class="text-[11px] text-slate-500 ml-6">Psalm 100</p>
+                      </div>
+                      <span class="text-[11px] text-slate-600 shrink-0">Pastor David</span>
+                    </div>
+
+                    <div class="py-2.5 flex items-baseline justify-between gap-4">
+                      <div>
+                        <span class="text-[11px] font-mono text-slate-400 mr-2">02</span>
+                        <span class="font-semibold text-slate-900">Congregational Hymn</span>
+                        <p class="text-[11px] text-slate-500 ml-6">Hymn #104 — O Worship the King</p>
+                      </div>
+                      <span class="text-[11px] text-slate-600 shrink-0">Choir</span>
+                    </div>
+
+                    <div class="py-2.5 flex items-baseline justify-between gap-4">
+                      <div>
+                        <span class="text-[11px] font-mono text-slate-400 mr-2">03</span>
+                        <span class="font-semibold text-slate-900">Scripture Reading</span>
+                        <p class="text-[11px] text-slate-500 ml-6">Colossians 3:12–17</p>
+                      </div>
+                      <span class="text-[11px] text-slate-600 shrink-0">Elder Sarah</span>
+                    </div>
+
+                    <div class="py-2.5 flex items-baseline justify-between gap-4">
+                      <div>
+                        <span class="text-[11px] font-mono text-slate-400 mr-2">04</span>
+                        <span class="font-semibold text-slate-900">Pastoral Intercession</span>
+                      </div>
+                      <span class="text-[11px] text-slate-600 shrink-0">Deacon James</span>
+                    </div>
+
+                    <div class="py-2.5 flex items-baseline justify-between gap-4">
+                      <div>
+                        <span class="text-[11px] font-mono text-slate-400 mr-2">05</span>
+                        <span class="font-semibold text-slate-900">Sermon: Walking in Faith</span>
+                      </div>
+                      <span class="text-[11px] text-slate-600 shrink-0">Lead Pastor</span>
+                    </div>
+
+                    <div class="py-2.5 flex items-baseline justify-between gap-4">
+                      <div>
+                        <span class="text-[11px] font-mono text-slate-400 mr-2">06</span>
+                        <span class="font-semibold text-slate-900">Offering &amp; Benediction</span>
+                      </div>
+                      <span class="text-[11px] text-slate-600 shrink-0">All</span>
+                    </div>
+                  </div>
+
+                  <div class="border-t border-slate-200 pt-3 flex items-center justify-between text-[10px] font-sans text-slate-400">
+                    <span>12 Grace Avenue, Lagos</span>
+                    <span>Page 1 of 1</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Themes Section -->
-  <section id="landing-themes" class="py-20 bg-slate-50 border-b border-slate-200">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <span class="chip chip-navy text-xs font-semibold uppercase tracking-wider">Visual Identity</span>
-      <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
-        Tailored Aesthetics for Your Sanctuary
-      </h2>
-      <p class="text-sm sm:text-base text-slate-600 mt-3 max-w-2xl mx-auto">
-        Whether your liturgy is traditional Anglican, Presbyterian, Pentecostal, or modern non-denominational, customize fonts, borders, and brand accents.
-      </p>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 text-left">
-        <div class="card p-5">
-          <div class="h-28 rounded-lg bg-amber-50/70 border border-amber-200/60 p-3 flex flex-col justify-between">
-            <span class="text-[10px] font-serif font-bold text-amber-900 uppercase tracking-widest">Classic Liturgy</span>
-            <div class="text-[11px] font-serif text-slate-800 leading-tight">Serif Typography • Double Framing • Formal Elegance</div>
-          </div>
-          <h3 class="font-bold text-sm text-slate-900 mt-3.5">Classic Liturgy</h3>
-          <p class="text-xs text-slate-500 mt-1">Deep navy and warm parchment accents with timeless serif headers.</p>
+    <!-- Architectural 3-Column Workflow Grid -->
+    <section id="landing-workflow" class="border-b border-slate-200 bg-slate-50">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="max-w-xl mb-10">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Workflow</p>
+          <h2 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">Built for Saturday preparation and Sunday morning clarity.</h2>
         </div>
 
-        <div class="card p-5">
-          <div class="h-28 rounded-lg bg-blue-50/70 border border-blue-200/60 p-3 flex flex-col justify-between">
-            <span class="text-[10px] font-sans font-bold text-blue-900 uppercase tracking-wider">Modern Clean</span>
-            <div class="text-[11px] font-sans text-slate-800 leading-tight">Sans Headers • Geometric Balance • Clean Horizontal Rules</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 bg-white border border-slate-200 rounded-xl divide-y md:divide-y-0 md:divide-x divide-slate-200">
+          <div class="p-6 sm:p-7">
+            <span class="text-xs font-mono font-semibold text-slate-400">01</span>
+            <h3 class="mt-3 text-base font-bold text-slate-900">Structure the liturgy</h3>
+            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+              Start from a saved blueprint or blank order. Add hymns, scripture readings, prayers, choir ministrations, and announcements, then drag to reorder.
+            </p>
           </div>
-          <h3 class="font-bold text-sm text-slate-900 mt-3.5">Modern Cathedral</h3>
-          <p class="text-xs text-slate-500 mt-1">Contemporary sans-serif clarity ideal for vibrant modern praise services.</p>
-        </div>
 
-        <div class="card p-5">
-          <div class="h-28 rounded-lg bg-slate-100 border border-slate-200 p-3 flex flex-col justify-between">
-            <span class="text-[10px] font-sans font-bold text-slate-700 uppercase tracking-wider">Minimalist</span>
-            <div class="text-[11px] font-sans text-slate-700 leading-tight">Borderless Simplicity • Generous Whitespace • Focus on Words</div>
+          <div class="p-6 sm:p-7">
+            <span class="text-xs font-mono font-semibold text-slate-400">02</span>
+            <h3 class="mt-3 text-base font-bold text-slate-900">Assign officiating ministers</h3>
+            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+              Record the officiating pastor, scripture reader, or worship leader alongside each item so the entire team shares a single accurate running sheet.
+            </p>
           </div>
-          <h3 class="font-bold text-sm text-slate-900 mt-3.5">Contemporary Minimalist</h3>
-          <p class="text-xs text-slate-500 mt-1">Understated, distraction-free aesthetic with generous breathing room.</p>
+
+          <div class="p-6 sm:p-7">
+            <span class="text-xs font-mono font-semibold text-slate-400">03</span>
+            <h3 class="mt-3 text-base font-bold text-slate-900">Print or export A4 PDF</h3>
+            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+              The live paper view formats your service onto an A4 page automatically. Print directly to your church copier or save a vector PDF for distribution.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Pricing Section -->
-  <section id="landing-pricing" class="py-20 bg-white border-b border-slate-200">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <span class="chip chip-navy text-xs font-semibold uppercase tracking-wider">Community Guarantee</span>
-      <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
-        100% Free Forever for Every Congregation
-      </h2>
-      <p class="text-sm sm:text-base text-slate-600 mt-3 max-w-xl mx-auto">
-        No subscription fees. No locked features. No credit card ever required.
-      </p>
-
-      <div class="card p-8 mt-10 max-w-lg mx-auto border-2 border-blue-900/30 shadow-lg text-left">
-        <div class="flex items-center justify-between">
+    <!-- Starter Templates Directory -->
+    <section id="landing-blueprints" class="border-b border-slate-200 bg-white">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
-            <h3 class="text-lg font-bold text-slate-900">Church Community Edition</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Full access for pastors, directors &amp; media teams</p>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Included Blueprints</p>
+            <h2 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">Standard service orders ready to customize</h2>
           </div>
-          <span class="text-2xl font-black text-blue-900">$0 <span class="text-xs font-normal text-slate-500">/ forever</span></span>
+          <button class="text-xs font-semibold text-slate-900 hover:underline self-start sm:self-auto cursor-pointer" data-action="nav" data-page="signup">
+            Create workspace to edit templates &rarr;
+          </button>
         </div>
 
-        <div class="mt-6 pt-6 border-t border-slate-100 space-y-3 text-xs text-slate-700">
-          <div class="flex items-center gap-2.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i><span>Unlimited Sunday service plans</span></div>
-          <div class="flex items-center gap-2.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i><span>Unlimited custom liturgy blueprints</span></div>
-          <div class="flex items-center gap-2.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i><span>High-resolution vector A4 PDF export</span></div>
-          <div class="flex items-center gap-2.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i><span>Theme customizer &amp; church branding</span></div>
-          <div class="flex items-center gap-2.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i><span>IndexedDB local-first offline storage</span></div>
-          <div class="flex items-center gap-2.5"><i data-lucide="check" class="w-4 h-4 text-emerald-600"></i><span>One-click JSON backup and data export</span></div>
-        </div>
-
-        <button class="btn btn-primary w-full py-3 text-xs shadow-md mt-8 font-bold" data-action="nav" data-page="signup">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>Create Church Workspace Free
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ Section -->
-  <section class="py-20 bg-slate-50 border-b border-slate-200">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12">
-        <span class="chip chip-navy text-xs font-semibold uppercase tracking-wider">Frequently Asked Questions</span>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">Got Questions?</h2>
-      </div>
-
-      <div class="space-y-3">
-        <div class="card p-4 cursor-pointer" data-action="toggle-faq" data-target="faq-1">
-          <div class="flex items-center justify-between">
-            <h4 class="text-sm font-bold text-slate-900">Does Order of Service work completely offline?</h4>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform"></i>
+        <div class="border border-slate-200 rounded-xl divide-y divide-slate-200">
+          <div class="p-5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Sunday Worship Service</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Opening Prayer • Praise &amp; Worship • Scripture Reading • Choir Ministration • Sermon • Offering • Benediction</p>
+            </div>
+            <span class="text-xs font-mono text-slate-500 shrink-0">8 items</span>
           </div>
-          <p id="faq-1" class="text-xs text-slate-600 mt-2.5 leading-relaxed hidden">
-            Yes! All your service blueprints, liturgical items, themes, and past services are securely stored directly in your browser's IndexedDB database. You can plan and print without an active internet connection.
-          </p>
-        </div>
 
-        <div class="card p-4 cursor-pointer" data-action="toggle-faq" data-target="faq-2">
-          <div class="flex items-center justify-between">
-            <h4 class="text-sm font-bold text-slate-900">Can we print directly on standard A4 church paper?</h4>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          <div class="p-5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Holy Communion &amp; Thanksgiving</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Call to Worship • Hymn of Adoration • Prayer of Confession • Words of Institution • Distribution of Elements • Thanksgiving</p>
+            </div>
+            <span class="text-xs font-mono text-slate-500 shrink-0">9 items</span>
           </div>
-          <p id="faq-2" class="text-xs text-slate-600 mt-2.5 leading-relaxed hidden">
-            Absolutely. The preview canvas and vector PDF export engine are strictly calibrated to the ISO A4 standard (210mm × 297mm) with balanced margins. Both laser printers and folding bulletin presses will output crisp results.
-          </p>
-        </div>
 
-        <div class="card p-4 cursor-pointer" data-action="toggle-faq" data-target="faq-3">
-          <div class="flex items-center justify-between">
-            <h4 class="text-sm font-bold text-slate-900">Can I transfer our liturgy blueprints to another computer?</h4>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          <div class="p-5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Midweek Bible Study</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Opening Worship • Expository Teaching • Interactive Q&amp;A • Corporate Intercession • Closing Benediction</p>
+            </div>
+            <span class="text-xs font-mono text-slate-500 shrink-0">5 items</span>
           </div>
-          <p id="faq-3" class="text-xs text-slate-600 mt-2.5 leading-relaxed hidden">
-            Yes! In the Account &amp; Backup section, you can export a portable JSON backup file with one click and import it onto any other church device or laptop in seconds.
-          </p>
+
+          <div class="p-5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Youth &amp; Contemporary Service</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Icebreaker &amp; Welcome • Contemporary Praise • Testimonies • Word &amp; Discussion • Altar Prayer</p>
+            </div>
+            <span class="text-xs font-mono text-slate-500 shrink-0">6 items</span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Final CTA Banner -->
-  <section class="py-16 bg-blue-900 text-white text-center relative overflow-hidden">
-    <div class="max-w-4xl mx-auto px-4 relative z-10">
-      <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight">Ready to Elevate Your Sunday Worship Prep?</h2>
-      <p class="text-blue-100 text-xs sm:text-sm mt-3 max-w-xl mx-auto">
-        Join ministry leaders and worship coordinators preparing organized, reverent services with zero hassle.
-      </p>
-      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-        <button class="btn bg-white text-blue-950 hover:bg-slate-100 font-bold py-3 px-6 text-xs rounded-xl shadow-md w-full sm:w-auto" data-action="nav" data-page="signup">
-          <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>Create Free Workspace
-        </button>
-        <button class="btn bg-blue-800 text-white hover:bg-blue-700 py-3 px-5 text-xs rounded-xl border border-blue-700 w-full sm:w-auto" data-action="demo-login" data-role="pastor">
-          <i data-lucide="play" class="w-4 h-4"></i>Launch Demo Workspace
-        </button>
-      </div>
-    </div>
-  </section>
+    <!-- Print & Privacy Specification -->
+    <section id="landing-print" class="border-b border-slate-200 bg-slate-50">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="bg-white border border-slate-200 rounded-xl p-6 sm:p-8">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Typography &amp; Themes</p>
+            <h3 class="mt-2 text-lg font-bold text-slate-900">Three typographic presets</h3>
+            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+              Switch between <strong>Classic Liturgy</strong> (serif headings with double rules), <strong>Modern Clean</strong> (sans-serif geometric layout), and <strong>Minimalist</strong> (unbordered whitespace). Customize your church name, address, logo, and primary ink color.
+            </p>
+          </div>
 
-  <!-- Footer -->
-  <footer class="py-12 bg-white border-t border-slate-200 text-slate-500 text-xs">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-2.5">
-        <div class="w-6 h-6 rounded-lg bg-white border border-slate-200 p-0.5 flex items-center justify-center">
-          <img src="/logo-icon.png" alt="Logo" class="w-full h-full object-contain">
+          <div class="bg-white border border-slate-200 rounded-xl p-6 sm:p-8">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Local-First Architecture</p>
+            <h3 class="mt-2 text-lg font-bold text-slate-900">Works offline, owned by your church</h3>
+            <p class="mt-2 text-xs text-slate-600 leading-relaxed">
+              All templates, Sunday programs, and PDF history are stored directly in your browser's local database. Export a complete JSON backup file at any time to move your workspace between church computers.
+            </p>
+          </div>
         </div>
-        <span class="font-bold text-slate-800">Order of Service</span>
-        <span>• Plan • Create • Worship</span>
       </div>
-      <p class="text-[11px] text-slate-400">Dedicated to the glory of God and the uplifting of His church.</p>
-    </div>
-  </footer>`;
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white py-10 mt-auto">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div>
+          <span class="font-bold text-slate-900 uppercase tracking-tight">Order of Service</span>
+          <span class="mx-2 text-slate-300">•</span>
+          <span>Liturgical Planning &amp; Bulletin Studio</span>
+        </div>
+        <div class="flex items-center gap-6">
+          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="nav" data-page="login">Log in</button>
+          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="nav" data-page="signup">Create account</button>
+          <button class="hover:text-slate-900 transition-colors cursor-pointer" data-action="demo-login" data-role="pastor">Sample workspace</button>
+        </div>
+      </div>
+    </footer>
+  </div>`;
 }
 
 // ======================================
@@ -3445,81 +3177,59 @@ async function renderLanding() {
 
 function renderLogin() {
   return `
-  <div class="min-h-[85vh] flex items-center justify-center py-12 px-4 auth-bg">
-    <div class="max-w-md w-full bg-white rounded-2xl border border-slate-200/90 shadow-xl p-6 sm:p-8">
-      <div class="flex flex-col items-center text-center mb-6">
-        <div class="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shadow-xs mb-3">
-          <img src="/logo-icon.png" alt="Order of Service" class="w-full h-full object-contain">
-        </div>
-        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Welcome Back</h2>
-        <p class="text-xs text-slate-500 mt-1">Sign in to manage your church liturgies and programs.</p>
-      </div>
-
-      <!-- Auth Switcher -->
-      <div class="grid grid-cols-2 p-1 bg-slate-100 rounded-xl mb-6 text-xs font-semibold">
-        <button class="py-2 rounded-lg bg-white text-slate-900 shadow-xs cursor-default">Sign In</button>
-        <button class="py-2 rounded-lg text-slate-500 hover:text-slate-900 transition-colors" data-action="nav" data-page="signup">Create Account</button>
-      </div>
-
-      <form id="login-form" onsubmit="return false;" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5" for="login-email">Church or Personal Email</label>
-          <div class="relative">
-            <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-            <input type="email" id="login-email" class="input pl-10 text-xs w-full" placeholder="pastor@gracefellowship.org" required>
-          </div>
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="block text-xs font-bold text-slate-700" for="login-password">Password</label>
-            <span class="text-[11px] text-blue-900 font-medium cursor-pointer hover:underline" onclick="toast('Password reset available in settings or demo accounts', 'info')">Forgot?</span>
-          </div>
-          <div class="relative">
-            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-            <input type="password" id="login-password" class="input pl-10 pr-10 text-xs w-full" placeholder="••••••••" required>
-            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" data-action="toggle-password" data-target="login-password" aria-label="Toggle password visibility">
-              <i data-lucide="eye" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 pt-1">
-          <input type="checkbox" id="login-remember" checked class="rounded border-slate-300 text-blue-900 focus:ring-blue-900">
-          <label for="login-remember" class="text-xs text-slate-600 cursor-pointer">Remember this workspace session</label>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-full py-2.5 text-xs shadow-sm font-bold mt-2" data-action="login-submit">
-          <i data-lucide="log-in" class="w-4 h-4"></i>Sign In to Workspace
+  <div class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6">
+    <div class="max-w-[400px] w-full mx-auto">
+      <div class="mb-6 flex items-center justify-between">
+        <button class="text-xs font-bold uppercase tracking-wider text-slate-900 hover:text-slate-600 transition-colors cursor-pointer" data-action="nav" data-page="landing">
+          &larr; Order of Service
         </button>
-      </form>
-
-      <div class="relative my-6 text-center">
-        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
-        <span class="relative bg-white px-3 text-[11px] text-slate-500 font-medium">Or instant demo sign-in</span>
+        <span class="text-xs text-slate-400">Workspace Access</span>
       </div>
 
-      <div class="space-y-2">
-        <button class="btn btn-ghost w-full text-xs py-2 border border-slate-200 justify-start" data-action="demo-login" data-role="pastor">
-          <i data-lucide="user" class="w-3.5 h-3.5 text-blue-900"></i>
-          <span>Sign In as <strong>Lead Pastor</strong> (Demo)</span>
-        </button>
-        <button class="btn btn-ghost w-full text-xs py-2 border border-slate-200 justify-start" data-action="demo-login" data-role="worship">
-          <i data-lucide="music" class="w-3.5 h-3.5 text-amber-700"></i>
-          <span>Sign In as <strong>Worship Leader</strong> (Demo)</span>
-        </button>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div class="mb-6">
+          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Log in to your workspace</h1>
+          <p class="text-xs text-slate-500 mt-1">Enter your credentials to access your templates and Sunday bulletins.</p>
+        </div>
+
+        <form id="login-form" onsubmit="return false;" class="space-y-4">
+          <div>
+            <label class="form-label" for="login-email">Email address</label>
+            <input type="email" id="login-email" class="input" placeholder="name@church.org" required>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[13px] font-semibold text-slate-700" for="login-password">Password</label>
+              <button type="button" class="text-[11px] font-medium text-slate-500 hover:text-slate-900 cursor-pointer" data-action="toggle-password" data-target="login-password">
+                Show
+              </button>
+            </div>
+            <input type="password" id="login-password" class="input" placeholder="Enter your password" required>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="login-remember" checked class="rounded border-slate-300 text-slate-900 focus:ring-slate-900">
+            <label for="login-remember" class="text-xs text-slate-600 cursor-pointer">Keep me signed in on this browser</label>
+          </div>
+
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition-colors cursor-pointer mt-2" data-action="login-submit">
+            Log in
+          </button>
+        </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-200">
+          <p class="text-[11px] font-medium text-slate-500 mb-2.5">Quick access without registration</p>
+          <button type="button" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 font-medium py-2 px-3 rounded-lg text-xs transition-colors cursor-pointer text-center" data-action="demo-login" data-role="pastor">
+            Open sample church workspace
+          </button>
+        </div>
       </div>
 
-      <p class="text-center text-xs text-slate-500 mt-6">
-        Don't have an account? 
-        <button class="font-bold text-blue-900 hover:underline" data-action="nav" data-page="signup">Create one free</button>
+      <p class="text-center text-xs text-slate-500 mt-5">
+        Need to set up a new church?
+        <button class="font-semibold text-slate-900 hover:underline ml-1 cursor-pointer" data-action="nav" data-page="signup">Create an account</button>
       </p>
-
-      <div class="text-center mt-3">
-        <button class="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1" data-action="nav" data-page="landing">
-          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>Back to Home Page
-        </button>
-      </div>
     </div>
   </div>`;
 }
@@ -3530,103 +3240,70 @@ function renderLogin() {
 
 function renderSignup() {
   return `
-  <div class="min-h-[85vh] flex items-center justify-center py-12 px-4 auth-bg">
-    <div class="max-w-lg w-full bg-white rounded-2xl border border-slate-200/90 shadow-xl p-6 sm:p-8">
-      <div class="flex flex-col items-center text-center mb-6">
-        <div class="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shadow-xs mb-3">
-          <img src="/logo-icon.png" alt="Order of Service" class="w-full h-full object-contain">
-        </div>
-        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Create Church Workspace</h2>
-        <p class="text-xs text-slate-500 mt-1">Set up your church profile to start planning weekly worship.</p>
+  <div class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6">
+    <div class="max-w-[440px] w-full mx-auto">
+      <div class="mb-6 flex items-center justify-between">
+        <button class="text-xs font-bold uppercase tracking-wider text-slate-900 hover:text-slate-600 transition-colors cursor-pointer" data-action="nav" data-page="landing">
+          &larr; Order of Service
+        </button>
+        <span class="text-xs text-slate-400">New Church Setup</span>
       </div>
 
-      <!-- Auth Switcher -->
-      <div class="grid grid-cols-2 p-1 bg-slate-100 rounded-xl mb-6 text-xs font-semibold">
-        <button class="py-2 rounded-lg text-slate-500 hover:text-slate-900 transition-colors" data-action="nav" data-page="login">Sign In</button>
-        <button class="py-2 rounded-lg bg-white text-slate-900 shadow-xs cursor-default">Create Account</button>
-      </div>
-
-      <form id="signup-form" onsubmit="return false;" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5" for="signup-church">Church or Parish Name</label>
-          <div class="relative">
-            <i data-lucide="church" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-            <input type="text" id="signup-church" class="input pl-10 text-xs w-full" placeholder="e.g. Grace Fellowship Church" required>
-          </div>
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div class="mb-6">
+          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Create your church workspace</h1>
+          <p class="text-xs text-slate-500 mt-1">Configure your parish name and administrator profile.</p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <form id="signup-form" onsubmit="return false;" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5" for="signup-name">Your Full Name</label>
-            <div class="relative">
-              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-              <input type="text" id="signup-name" class="input pl-10 text-xs w-full" placeholder="Pastor David Ade" required>
+            <label class="form-label" for="signup-church">Church or parish name</label>
+            <input type="text" id="signup-church" class="input" placeholder="e.g. Grace Fellowship Church" required>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label class="form-label" for="signup-name">Your name</label>
+              <input type="text" id="signup-name" class="input" placeholder="Pastor David Ade" required>
+            </div>
+
+            <div>
+              <label class="form-label" for="signup-role">Role</label>
+              <select id="signup-role" class="input">
+                <option value="Lead Pastor">Lead Pastor</option>
+                <option value="Worship Leader">Worship Leader</option>
+                <option value="Church Administrator">Administrator</option>
+                <option value="Choir Director">Choir Director</option>
+                <option value="Media Team">Media Team</option>
+              </select>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5" for="signup-role">Ministry Role</label>
-            <select id="signup-role" class="input text-xs w-full font-medium">
-              <option value="Lead Pastor">Lead Pastor</option>
-              <option value="Worship Minister">Worship Pastor / Leader</option>
-              <option value="Church Administrator">Church Administrator</option>
-              <option value="Choir / Music Director">Choir / Music Director</option>
-              <option value="Media &amp; AV Team">Media &amp; AV Team</option>
-              <option value="Elder / Deacon">Elder / Deacon</option>
-            </select>
+            <label class="form-label" for="signup-email">Email address</label>
+            <input type="email" id="signup-email" class="input" placeholder="name@church.org" required>
           </div>
-        </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5" for="signup-email">Church or Personal Email</label>
-          <div class="relative">
-            <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-            <input type="email" id="signup-email" class="input pl-10 text-xs w-full" placeholder="david@gracefellowship.org" required>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[13px] font-semibold text-slate-700" for="signup-password">Password</label>
+              <button type="button" class="text-[11px] font-medium text-slate-500 hover:text-slate-900 cursor-pointer" data-action="toggle-password" data-target="signup-password">
+                Show
+              </button>
+            </div>
+            <input type="password" id="signup-password" class="input" placeholder="Minimum 4 characters" minlength="4" required>
           </div>
-        </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5" for="signup-password">Password</label>
-          <div class="relative">
-            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-            <input type="password" id="signup-password" class="input pl-10 pr-10 text-xs w-full" placeholder="At least 6 characters" minlength="4" required>
-            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" data-action="toggle-password" data-target="signup-password" aria-label="Toggle password visibility">
-              <i data-lucide="eye" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex items-start gap-2 pt-1">
-          <input type="checkbox" id="signup-agree" checked class="mt-0.5 rounded border-slate-300 text-blue-900 focus:ring-blue-900">
-          <label for="signup-agree" class="text-[11px] text-slate-600 leading-tight cursor-pointer">
-            I understand church data is stored locally &amp; privately on this browser with JSON backup capabilities.
-          </label>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-full py-2.5 text-xs shadow-sm font-bold mt-2" data-action="signup-submit">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>Create Workspace &amp; Launch Planner
-        </button>
-      </form>
-
-      <div class="relative my-6 text-center">
-        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
-        <span class="relative bg-white px-3 text-[11px] text-slate-500 font-medium">Want to test without account?</span>
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition-colors cursor-pointer mt-2" data-action="signup-submit">
+            Create workspace
+          </button>
+        </form>
       </div>
 
-      <button class="btn btn-ghost w-full text-xs py-2 border border-slate-200" data-action="demo-login" data-role="pastor">
-        <i data-lucide="play" class="w-3.5 h-3.5 text-blue-900"></i>Explore Instant Demo Workspace
-      </button>
-
-      <p class="text-center text-xs text-slate-500 mt-6">
-        Already have a workspace? 
-        <button class="font-bold text-blue-900 hover:underline" data-action="nav" data-page="login">Sign In</button>
+      <p class="text-center text-xs text-slate-500 mt-5">
+        Already have a workspace?
+        <button class="font-semibold text-slate-900 hover:underline ml-1 cursor-pointer" data-action="nav" data-page="login">Log in</button>
       </p>
-
-      <div class="text-center mt-3">
-        <button class="text-xs text-slate-400 hover:text-slate-600 inline-flex items-center gap-1" data-action="nav" data-page="landing">
-          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>Back to Home Page
-        </button>
-      </div>
     </div>
   </div>`;
 }
@@ -4338,9 +4015,12 @@ async function showPage(page) {
 
   // Enforce landing page first: Require login before accessing workspace
   if (!isPublic && !App.user) {
-    toast('Please sign in or start a free workspace to access the planner', 'info');
+    toast('Please log in or create a workspace to continue', 'info');
     page = 'login';
   }
+
+  const finalIsPublic = ['landing', 'login', 'signup'].includes(page);
+  document.body.setAttribute('data-public-page', finalIsPublic ? 'true' : 'false');
 
   App.page = page;
   App.searchQuery = '';
@@ -4353,16 +4033,35 @@ async function showPage(page) {
   const main = document.getElementById('main-content');
   const viewEl = document.getElementById('view');
 
-  if (['landing', 'login', 'signup'].includes(page)) {
-    if (aside) aside.classList.add('hidden');
-    if (mobileHeader) mobileHeader.classList.add('hidden');
-    if (bottomNav) bottomNav.classList.add('hidden');
+  if (finalIsPublic) {
+    if (aside) {
+      aside.classList.remove('lg:flex');
+      aside.classList.add('hidden');
+      aside.style.display = 'none';
+    }
+    if (mobileHeader) {
+      mobileHeader.classList.add('hidden');
+      mobileHeader.style.display = 'none';
+    }
+    if (bottomNav) {
+      bottomNav.classList.add('hidden');
+      bottomNav.style.display = 'none';
+    }
     if (main) main.classList.remove('lg:pl-64');
     if (viewEl) viewEl.className = 'w-full px-0 py-0 pb-0';
   } else {
-    if (aside) aside.classList.remove('hidden');
-    if (mobileHeader) mobileHeader.classList.remove('hidden');
-    if (bottomNav) bottomNav.classList.remove('hidden');
+    if (aside) {
+      aside.classList.add('lg:flex');
+      aside.style.display = '';
+    }
+    if (mobileHeader) {
+      mobileHeader.classList.remove('hidden');
+      mobileHeader.style.display = '';
+    }
+    if (bottomNav) {
+      bottomNav.classList.remove('hidden');
+      bottomNav.style.display = '';
+    }
     if (main) main.classList.add('lg:pl-64');
     if (viewEl) viewEl.className = 'mx-auto max-w-6xl px-4 sm:px-6 lg:px-10 py-6 lg:py-8 pb-32 lg:pb-16';
   }
@@ -4505,6 +4204,135 @@ function handleSearchInput(type, value) {
       }
     }
   }, 100);
+}
+
+// ======================================
+// AUTHENTICATION HANDLERS
+// ======================================
+
+async function handleLoginSubmit() {
+  const emailInput = document.getElementById('login-email');
+  const passInput = document.getElementById('login-password');
+  const email = ((emailInput && emailInput.value) || '').trim();
+  const pass = ((passInput && passInput.value) || '').trim();
+
+  if (!email || !email.includes('@')) {
+    toast('Please enter a valid email address', 'error');
+    if (emailInput) emailInput.focus();
+    return;
+  }
+  if (!pass || pass.length < 4) {
+    toast('Please enter your password (at least 4 characters)', 'error');
+    if (passInput) passInput.focus();
+    return;
+  }
+
+  const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const user = {
+    id: uid(),
+    name: name,
+    email: email,
+    role: 'Lead Pastor',
+    churchName: (App.church && App.church.name) || 'Order of Service',
+    loggedInAt: new Date().toISOString()
+  };
+
+  saveSession(user);
+  toast('Signed in to workspace');
+  await showPage('dashboard');
+}
+
+async function handleSignupSubmit() {
+  const churchInput = document.getElementById('signup-church');
+  const nameInput = document.getElementById('signup-name');
+  const roleInput = document.getElementById('signup-role');
+  const emailInput = document.getElementById('signup-email');
+  const passInput = document.getElementById('signup-password');
+
+  const churchName = ((churchInput && churchInput.value) || '').trim();
+  const name = ((nameInput && nameInput.value) || '').trim();
+  const role = ((roleInput && roleInput.value) || 'Lead Pastor').trim();
+  const email = ((emailInput && emailInput.value) || '').trim();
+  const pass = ((passInput && passInput.value) || '').trim();
+
+  if (!churchName) {
+    toast('Please enter your church or parish name', 'error');
+    if (churchInput) churchInput.focus();
+    return;
+  }
+  if (!name) {
+    toast('Please enter your name', 'error');
+    if (nameInput) nameInput.focus();
+    return;
+  }
+  if (!email || !email.includes('@')) {
+    toast('Please enter a valid email address', 'error');
+    if (emailInput) emailInput.focus();
+    return;
+  }
+  if (!pass || pass.length < 4) {
+    toast('Password must be at least 4 characters', 'error');
+    if (passInput) passInput.focus();
+    return;
+  }
+
+  if (App.church) {
+    App.church.name = churchName;
+    try { await db.church.put(App.church); } catch (e) {}
+    updateBranding();
+  }
+
+  const user = {
+    id: uid(),
+    name: name,
+    email: email,
+    role: role,
+    churchName: churchName,
+    loggedInAt: new Date().toISOString()
+  };
+
+  saveSession(user);
+  toast('Workspace created for ' + churchName);
+  await showPage('dashboard');
+}
+
+async function handleDemoLogin(roleType) {
+  const isWorship = roleType === 'worship';
+  const name = isWorship ? 'Sarah Jenkins' : 'Pastor David Adeleke';
+  const role = isWorship ? 'Worship Leader' : 'Lead Pastor';
+  const email = isWorship ? 'sarah@gracefellowship.org' : 'david@gracefellowship.org';
+  const churchName = 'Grace Fellowship Church';
+
+  if (App.church) {
+    App.church.name = churchName;
+    try { await db.church.put(App.church); } catch (e) {}
+    updateBranding();
+  }
+
+  const user = {
+    id: uid(),
+    name: name,
+    email: email,
+    role: role,
+    churchName: churchName,
+    isDemo: true,
+    loggedInAt: new Date().toISOString()
+  };
+
+  saveSession(user);
+  toast('Signed in as ' + name);
+  await showPage('dashboard');
+}
+
+function handleTogglePassword(targetId) {
+  const input = document.getElementById(targetId);
+  if (!input) return;
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  const btn = document.querySelector('[data-action="toggle-password"][data-target="' + targetId + '"]');
+  if (btn) {
+    btn.textContent = isPass ? 'Hide' : 'Show';
+  }
 }
 
 function bindGlobalEvents() {
