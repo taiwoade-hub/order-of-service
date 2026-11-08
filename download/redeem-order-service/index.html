@@ -741,7 +741,7 @@ tailwind.config = {
 <div id="app" class="hidden min-h-screen">
 
   <!-- Sidebar (desktop) -->
-  <aside class="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-white border-r border-slate-200">
+  <aside id="desktop-sidebar" class="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-white border-r border-slate-200">
     <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
       <div id="brand-badge" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;">
         <img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain">
@@ -812,7 +812,7 @@ tailwind.config = {
   </aside>
 
   <!-- Mobile top header -->
-  <header class="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+  <header id="mobile-header" class="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
     <div class="flex items-center justify-between h-14 px-4">
       <div class="flex items-center gap-2.5 min-w-0 cursor-pointer" data-action="nav" data-page="dashboard" title="Go to Dashboard">
         <div id="brand-badge-h" class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-0.5 shrink-0 shadow-sm overflow-hidden" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;">
@@ -830,7 +830,7 @@ tailwind.config = {
   </header>
 
   <!-- Main content -->
-  <main class="lg:pl-64">
+  <main id="main-content" class="lg:pl-64">
     <div id="view" class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-10 py-6 lg:py-8 pb-32 lg:pb-16"></div>
   </main>
 
@@ -3992,9 +3992,10 @@ async function renderAccount() {
         <div class="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0 shadow-sm" style="width: 64px; height: 64px; min-width: 64px; min-height: 64px;">
           ${c.logo ? '<img src="' + esc(safeImgSrc(c.logo)) + '" alt="' + esc(c.name) + ' logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">' : '<img src="/logo-icon.png" alt="Logo" class="w-full h-full max-w-full max-h-full object-contain" style="max-width: 100%; max-height: 100%;">'}
         </div>
-        <h2 class="text-lg font-bold mt-3 text-slate-900">${esc(c.name || 'Redeem Church')}</h2>
-        <p class="text-xs text-slate-500 mt-0.5 break-all">${esc(c.email || 'hello@redeemchurch.org')}</p>
-        <span class="chip chip-navy mt-2.5">Local Workspace</span>
+        <h2 class="text-lg font-bold mt-3 text-slate-900">${esc((App.user && App.user.name) || c.name || 'Order of Service')}</h2>
+        <p class="text-xs text-slate-500 mt-0.5 break-all">${esc((App.user && App.user.email) || c.email || 'hello@orderofservice.app')}</p>
+        <span class="chip chip-navy mt-2.5">${esc((App.user && App.user.role) || 'Local Workspace')}</span>
+        ${App.user && App.user.churchName ? `<p class="text-[11px] font-semibold text-slate-700 mt-1">${esc(App.user.churchName)}</p>` : ''}
       </div>
 
       <div class="mt-5 divide-y divide-slate-100 border-y border-slate-100 text-xs">
@@ -4333,19 +4334,26 @@ const VIEWS = {
 const BOTTOM_SHORT = { dashboard: 'Home', templates: 'Templates', newService: 'Plan', history: 'History', settings: 'Settings' };
 
 async function showPage(page) {
+  const isPublic = ['landing', 'login', 'signup'].includes(page);
+
+  // Enforce landing page first: Require login before accessing workspace
+  if (!isPublic && !App.user) {
+    toast('Please sign in or start a free workspace to access the planner', 'info');
+    page = 'login';
+  }
+
   App.page = page;
   App.searchQuery = '';
   closeDrawer();
   destroyFlatpickrs();
 
-  const isPublic = ['landing', 'login', 'signup'].includes(page);
-  const aside = document.querySelector('aside.lg\:flex');
-  const mobileHeader = document.querySelector('header.lg\:hidden');
+  const aside = document.getElementById('desktop-sidebar');
+  const mobileHeader = document.getElementById('mobile-header');
   const bottomNav = document.getElementById('bottom-nav');
-  const main = document.querySelector('main');
+  const main = document.getElementById('main-content');
   const viewEl = document.getElementById('view');
 
-  if (isPublic) {
+  if (['landing', 'login', 'signup'].includes(page)) {
     if (aside) aside.classList.add('hidden');
     if (mobileHeader) mobileHeader.classList.add('hidden');
     if (bottomNav) bottomNav.classList.add('hidden');
@@ -4771,10 +4779,10 @@ async function boot() {
     const hash = window.location.hash.replace(/^#/, '');
     const validPages = Object.keys(VIEWS);
     let initialPage = 'landing';
-    if (validPages.includes(hash)) {
-      initialPage = hash;
-    } else if (App.user) {
-      initialPage = 'dashboard';
+    if (App.user) {
+      initialPage = validPages.includes(hash) ? hash : 'dashboard';
+    } else {
+      initialPage = ['login', 'signup'].includes(hash) ? hash : 'landing';
     }
 
     await showPage(initialPage);
