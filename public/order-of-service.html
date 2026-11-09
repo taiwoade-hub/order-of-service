@@ -989,10 +989,13 @@ const App = {
   serviceSortableInstance: null, // Service Sortable instance
   searchQuery: '',           // search filter
   previewScale: 1.0,         // live preview scale
+  planMonthsCount: 3,        // default 3 months ahead (1, 2, 3, or 4)
+  planSundays: [],           // active multi-month plan schedule
 };
 
 const NAV_ITEMS = [
   { id: 'dashboard',   label: 'Dashboard',          icon: 'home' },
+  { id: 'planAhead',   label: 'Plan Months Ahead',  icon: 'calendar-range' },
   { id: 'templates',   label: 'Templates',          icon: 'layout-template' },
   { id: 'newService',  label: 'New Sunday Service', icon: 'calendar-plus' },
   { id: 'sundays',     label: 'Saved Sundays',      icon: 'calendar-days' },
@@ -1001,8 +1004,8 @@ const NAV_ITEMS = [
   { id: 'settings',    label: 'Church Settings',    icon: 'settings' },
   { id: 'account',     label: 'Account & Backup',   icon: 'user' },
 ];
-const BOTTOM_NAV = ['dashboard', 'templates', 'newService', 'history', 'settings'];
-const NAV_PARENT = { templateEditor: 'templates', serviceEditor: 'sundays' };
+const BOTTOM_NAV = ['dashboard', 'planAhead', 'newService', 'sundays', 'settings'];
+const NAV_PARENT = { templateEditor: 'templates', serviceEditor: 'sundays', planAhead: 'planAhead' };
 
 const THEME_PRESETS = [
   { id: 'theme-classic', name: 'Classic Liturgy', builtIn: true, primary: '#1F3A5F', secondary: '#5C6670',
@@ -2382,6 +2385,17 @@ function drawPdfHeader(doc, P, church, service, logo) {
     y += 6.5 * thLines.length;
   }
 
+  if (service.scripture || service.preacher) {
+    doc.setFont(P.bf, 'normal'); doc.setFontSize(9.5);
+    doc.setTextColor(90, 90, 90);
+    const metaParts = [];
+    if (service.scripture) metaParts.push('Text: ' + service.scripture);
+    if (service.preacher) metaParts.push('Preacher: ' + service.preacher);
+    const metaStr = metaParts.join('   •   ');
+    if (isCenter) doc.text(metaStr, centerX, y, { align: 'center' }); else doc.text(metaStr, MX, y);
+    y += 5.5;
+  }
+
   doc.setDrawColor(224, 224, 220);
   doc.setLineWidth(0.3);
   if (P.borderStyle === 'none') doc.line(centerX - 32, y, centerX + 32, y);
@@ -2479,9 +2493,7 @@ function drawPdfFooter(doc, P, church, pageNo, total) {
   }
 }
 
-async function generateServicePdf(service, church, theme) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+async function drawServiceOnPdf(doc, service, church, theme) {
   const P = pdfParams(theme, church);
 
   let logo = null;
@@ -2506,6 +2518,7 @@ async function generateServicePdf(service, church, theme) {
     } catch (e) { logo = null; }
   }
 
+  const startPage = doc.getNumberOfPages();
   drawPdfChrome(doc, P);
   let y = drawPdfHeader(doc, P, church, service, logo);
 
@@ -2527,11 +2540,19 @@ async function generateServicePdf(service, church, theme) {
     y += P.gap;
   }
 
-  const total = doc.getNumberOfPages();
-  for (let p = 1; p <= total; p++) {
+  const endPage = doc.getNumberOfPages();
+  const servicePages = (endPage - startPage) + 1;
+  for (let p = startPage; p <= endPage; p++) {
     doc.setPage(p);
-    drawPdfFooter(doc, P, church, p, total);
+    const pageIndexInService = (p - startPage) + 1;
+    drawPdfFooter(doc, P, church, pageIndexInService, servicePages);
   }
+}
+
+async function generateServicePdf(service, church, theme) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  await drawServiceOnPdf(doc, service, church, theme);
   return doc;
 }
 
@@ -2830,6 +2851,689 @@ async function deleteSavedService(id) {
   if (App.currentService && App.currentService.id === id) App.currentService = null;
   toast('Sunday service deleted');
   showPage('sundays');
+}
+
+// ======================================
+// MULTI-MONTH SUNDAY PLANNER (1 to 4 Months Ahead)
+// ======================================
+
+function getPlanAheadMonthsCount() {
+  const stored = localStorage.getItem('oos_plan_months_count');
+  const count = parseInt(stored, 10);
+  return [1, 2, 3, 4].includes(count) ? count : 3;
+}
+
+function setPlanMonths(months) {
+  const count = [1, 2, 3, 4].includes(months) ? months : 3;
+  App.planMonthsCount = count;
+  try { localStorage.setItem('oos_plan_months_count', String(count)); } catch (e) {}
+  showPage('planAhead');
+}
+
+function computeUpcomingSundays(monthsCount = 3) {
+  const sundays = [];
+  let cur = nextSunday();
+  cur.setHours(12, 0, 0, 0);
+
+  const now = new Date();
+  const endDate = new Date(now.getFullYear(), now.getMonth() + monthsCount, now.getDate(), 23, 59, 59);
+
+  let weekIdx = 1;
+  while (cur <= endDate) {
+    const isoDate = isoOf(cur);
+    sundays.push({
+      date: isoDate,
+      dateObj: new Date(cur),
+      weekIndex: weekIdx++,
+    });
+    cur = new Date(cur.getTime() + 7 * 24 * 60 * 60 * 1000);
+  }
+  return sundays;
+}
+
+function defaultSundayTheme(isoDate, sundayNumInMonth) {
+  const d = dateOf(isoDate);
+  const monthName = d.toLocaleDateString('en-GB', { month: 'long' });
+  const ordinals = ['1st', '2nd', '3rd', '4th', '5th'];
+  const ord = ordinals[sundayNumInMonth - 1] || (sundayNumInMonth + 'th');
+  return ord + ' Sunday of ' + monthName;
+}
+
+async function loadPlanAheadSchedule(monthsCount) {
+  const upcoming = computeUpcomingSundays(monthsCount);
+  const existingServices = await db.services.toArray();
+  const serviceByDate = {};
+  existingServices.forEach(s => {
+    if (s.date) serviceByDate[s.date] = s;
+  });
+
+  const templates = await db.templates.toArray();
+  const defaultTemplate = templates[0] || { id: 'tpl-traditional', name: 'Traditional Worship Service', items: [] };
+
+  const defaultPreacher = (App.user && App.user.name) || (App.church && App.church.pastorName) || 'Lead Pastor';
+  const defaultLiturgist = 'Worship Leader';
+
+  const monthSundayCounter = {};
+  const planSundays = [];
+
+  for (const up of upcoming) {
+    const d = up.dateObj;
+    const monthKey = d.getFullYear() + '-' + d.getMonth();
+    monthSundayCounter[monthKey] = (monthSundayCounter[monthKey] || 0) + 1;
+    const numInMonth = monthSundayCounter[monthKey];
+
+    const existing = serviceByDate[up.date];
+    if (existing) {
+      planSundays.push({
+        ...deepClone(existing),
+        weekIndex: up.weekIndex,
+        numInMonth,
+        status: existing.status || 'ready',
+      });
+    } else {
+      const defaultTheme = defaultSundayTheme(up.date, numInMonth);
+      planSundays.push({
+        id: uid(),
+        date: up.date,
+        theme: defaultTheme,
+        description: '',
+        preacher: defaultPreacher,
+        liturgist: defaultLiturgist,
+        scripture: '',
+        hymn: '',
+        templateId: defaultTemplate.id,
+        templateName: defaultTemplate.name,
+        items: deepClone(defaultTemplate.items || []),
+        status: 'draft',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        weekIndex: up.weekIndex,
+        numInMonth,
+        isNew: true,
+      });
+    }
+  }
+  return planSundays;
+}
+
+async function renderPlanAhead() {
+  const monthsCount = getPlanAheadMonthsCount();
+  App.planMonthsCount = monthsCount;
+  const templates = await db.templates.toArray();
+  const church = App.church || {};
+
+  const planSundays = await loadPlanAheadSchedule(monthsCount);
+  App.planSundays = planSundays;
+
+  const totalSundays = planSundays.length;
+  const readyCount = planSundays.filter(s => s.status === 'ready').length;
+  const draftCount = totalSundays - readyCount;
+  const startDate = planSundays[0] ? fmtShortDate(planSundays[0].date) : '';
+  const endDate = planSundays[planSundays.length - 1] ? fmtShortDate(planSundays[planSundays.length - 1].date) : '';
+
+  const monthsGrouped = {};
+  for (const s of planSundays) {
+    const mName = fmtMonthYear(s.date);
+    if (!monthsGrouped[mName]) monthsGrouped[mName] = [];
+    monthsGrouped[mName].push(s);
+  }
+
+  return `
+  <!-- Top Title & Navigation -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Plan Months Ahead</h1>
+        <span class="chip chip-navy text-[11px] font-semibold">${monthsCount} ${monthsCount === 1 ? 'Month' : 'Months'} Horizon</span>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-500 mt-1">
+        Schedule 1, 2, 3, or 4 months of Sunday liturgies in advance with print-ready A4 bulletins.
+      </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button class="btn btn-secondary text-xs py-2 px-3 border border-slate-200" data-action="save-all-plan-sundays">
+        <i data-lucide="save" class="w-4 h-4 text-slate-600"></i>Save All Changes
+      </button>
+      <button class="btn btn-ghost text-xs py-2 px-3 border border-slate-200" data-action="nav" data-page="sundays">
+        <i data-lucide="calendar-days" class="w-4 h-4 text-slate-500"></i>Saved Sundays
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Horizon Selector (1, 2, 3, or 4 Months) -->
+  <div class="card p-4 sm:p-5 mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div>
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 1: Choose Planning Horizon</span>
+        <h3 class="text-sm font-bold text-slate-800 mt-0.5">How many months ahead would you like to plan?</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Switch flexibly between 1, 2, 3, or 4 months of upcoming worship services.</p>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full lg:w-auto">
+        ${[1, 2, 3, 4].map(m => {
+          const isActive = monthsCount === m;
+          const label = m === 1 ? '1 Month' : m + ' Months';
+          const sub = m === 1 ? '~4–5 Sundays' : m === 2 ? '~8–9 Sundays' : m === 3 ? '~13 Sundays (Quarter)' : '~17 Sundays (Extended)';
+          return `
+          <button class="plan-horizon-card text-left p-3 rounded-xl border transition-all ${
+            isActive
+              ? 'bg-slate-900 border-slate-900 text-white shadow-sm ring-2 ring-slate-900 ring-offset-2'
+              : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800 hover:bg-slate-50'
+          }" data-action="set-plan-months" data-months="${m}">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold ${isActive ? 'text-white' : 'text-slate-900'}">${label}</span>
+              ${isActive ? '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>' : ''}
+            </div>
+            <div class="text-[10px] ${isActive ? 'text-slate-300' : 'text-slate-500'} mt-0.5">${sub}</div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- Export & Choice Toolbar -->
+  <div class="card p-4 sm:p-5 mb-6 bg-slate-50/70 border-slate-200">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold text-xs">
+            ${totalSundays}
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">${totalSundays} Sundays in ${monthsCount} ${monthsCount === 1 ? 'Month' : 'Months'}</div>
+            <div class="text-[11px] text-slate-500">${startDate} – ${endDate}</div>
+          </div>
+        </div>
+        <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+        <div class="text-xs text-slate-600 flex items-center gap-3">
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>${readyCount} Ready</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>${draftCount} Drafts</span>
+        </div>
+      </div>
+
+      <!-- Export Choices -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <!-- Choice 1: Download Combined PDF -->
+        <button class="btn btn-primary text-xs py-2 px-3.5 shadow-sm flex items-center justify-center gap-2" data-action="download-plan-combined-pdf" title="Download all ${totalSundays} planned Sundays compiled in 1 master multi-page PDF document">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>Download Combined PDF (1 File)</span>
+        </button>
+
+        <!-- Choice 2: Download All Separate PDFs -->
+        <button class="btn btn-secondary text-xs py-2 px-3.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center gap-2" data-action="download-plan-separate-pdfs" title="Download each Sunday as its own separate A4 Order of Service PDF bulletin">
+          <i data-lucide="layers" class="w-4 h-4 text-blue-900"></i>
+          <span>Download All (Separate PDFs)</span>
+        </button>
+
+        <!-- Auto-fill liturgy items -->
+        <button class="btn btn-ghost text-xs py-2 px-3 border border-slate-200 text-slate-600 flex items-center justify-center gap-1.5" data-action="auto-fill-plan-template" title="Apply standard liturgy items to all unplanned Sundays">
+          <i data-lucide="sparkle" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span>Auto-fill Liturgy</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sundays Grouped by Month -->
+  <div class="space-y-8">
+    ${Object.keys(monthsGrouped).map((mName, mIdx) => {
+      const groupSundays = monthsGrouped[mName];
+      return `
+      <div class="space-y-4">
+        <!-- Month Group Header -->
+        <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+          <div class="flex items-center gap-2.5">
+            <span class="w-6 h-6 rounded-md bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold">M${mIdx + 1}</span>
+            <h2 class="text-lg font-extrabold text-slate-900">${esc(mName)}</h2>
+            <span class="text-xs text-slate-500 font-medium">(${groupSundays.length} ${groupSundays.length === 1 ? 'Sunday' : 'Sundays'})</span>
+          </div>
+          <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">Individual A4 Bulletins</span>
+        </div>
+
+        <!-- Sunday Cards List -->
+        <div class="grid grid-cols-1 gap-3.5">
+          ${groupSundays.map(s => renderPlanSundayCardHtml(s, templates)).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderPlanSundayCardHtml(s, templates) {
+  const md = fmtMonthDay(s.date);
+  const isReady = s.status === 'ready';
+
+  return `
+  <div class="card p-4 sm:p-5 border border-slate-200 hover:border-slate-300 transition-all bg-white" data-plan-date="${s.date}">
+    <div class="flex flex-col md:flex-row md:items-start gap-4">
+      
+      <!-- Date Pill -->
+      <div class="flex items-center md:flex-col justify-center shrink-0 w-full md:w-20 py-2 md:py-3 px-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center gap-2 md:gap-0">
+        <span class="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider">${esc(md.month)}</span>
+        <span class="text-2xl font-black text-slate-900 leading-none my-0.5">${esc(md.day)}</span>
+        <span class="text-[10px] text-slate-400 font-medium">Sunday</span>
+      </div>
+
+      <!-- Main Plan Details Form -->
+      <div class="flex-1 min-w-0 space-y-3">
+        <!-- Top Row: Theme & Status -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="flex-1">
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Sermon Theme / Sunday Title</label>
+            <input type="text" 
+              class="input text-xs sm:text-sm font-bold text-slate-900 w-full plan-field" 
+              data-date="${s.date}" 
+              data-field="theme" 
+              placeholder="e.g. Walking in Divine Peace / Communion Service" 
+              value="${esc(s.theme || '')}">
+          </div>
+          <div class="flex items-center gap-2 shrink-0 self-start sm:self-end">
+            <button class="chip ${isReady ? 'chip-green' : 'chip-navy'} text-[10px] font-semibold transition-colors" 
+              data-action="toggle-plan-status" 
+              data-date="${s.date}" 
+              title="Click to toggle status">
+              <span class="w-1.5 h-1.5 rounded-full ${isReady ? 'bg-emerald-500' : 'bg-blue-400'} mr-1"></span>
+              ${isReady ? 'Ready to Print' : 'In Planning (Draft)'}
+            </button>
+          </div>
+        </div>
+
+        <!-- Middle Inputs Grid: Scripture, Hymn, Preacher, Liturgist -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Scripture Text</label>
+            <input type="text" 
+              class="input text-xs w-full plan-field" 
+              data-date="${s.date}" 
+              data-field="scripture" 
+              placeholder="e.g. Psalm 23:1-6" 
+              value="${esc(s.scripture || '')}">
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Key Hymn / Praise</label>
+            <input type="text" 
+              class="input text-xs w-full plan-field" 
+              data-date="${s.date}" 
+              data-field="hymn" 
+              placeholder="e.g. Amazing Grace (Hymn #12)" 
+              value="${esc(s.hymn || '')}">
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Assigned Preacher</label>
+            <input type="text" 
+              class="input text-xs w-full plan-field" 
+              data-date="${s.date}" 
+              data-field="preacher" 
+              placeholder="e.g. Pastor David" 
+              value="${esc(s.preacher || '')}">
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Worship Leader</label>
+            <input type="text" 
+              class="input text-xs w-full plan-field" 
+              data-date="${s.date}" 
+              data-field="liturgist" 
+              placeholder="e.g. Elder Sarah" 
+              value="${esc(s.liturgist || '')}">
+          </div>
+        </div>
+
+        <!-- Bottom Actions Row -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-100">
+          <!-- Template selector -->
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-400 font-medium">Liturgy Template:</span>
+            <select class="select text-xs py-1 px-2.5 h-8 plan-template-select" data-date="${s.date}">
+              ${templates.map(t => `
+                <option value="${esc(t.id)}" ${s.templateId === t.id ? 'selected' : ''}>${esc(t.name)}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <!-- Card Buttons: Single PDF, Full Liturgy Editor, Save -->
+          <div class="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+            <button class="btn btn-secondary text-xs py-1.5 px-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5" 
+              data-action="download-plan-single-pdf" 
+              data-date="${s.date}"
+              title="Download clean A4 Order of Service bulletin for ${fmtShortDate(s.date)}">
+              <i data-lucide="file-down" class="w-3.5 h-3.5 text-blue-900"></i>
+              <span>Single Sunday PDF</span>
+            </button>
+
+            <button class="btn btn-ghost text-xs py-1.5 px-3 border border-slate-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5" 
+              data-action="open-plan-editor" 
+              data-date="${s.date}"
+              title="Open drag-and-drop item editor for this Sunday">
+              <i data-lucide="pencil" class="w-3.5 h-3.5 text-slate-500"></i>
+              <span>Edit Liturgy Items</span>
+            </button>
+
+            <button class="btn btn-ghost text-xs py-1.5 px-2.5 text-slate-500 hover:text-emerald-600" 
+              data-action="save-single-plan-sunday" 
+              data-date="${s.date}"
+              title="Save this Sunday">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>`;
+}
+
+function afterPlanAhead() {
+  $$('.plan-field').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const date = e.target.dataset.date;
+      const field = e.target.dataset.field;
+      const val = e.target.value;
+      const s = App.planSundays && App.planSundays.find(x => x.date === date);
+      if (s) {
+        s[field] = val;
+        clearTimeout(input._saveTimer);
+        input._saveTimer = setTimeout(async () => {
+          await syncPlanSundayToService(s);
+        }, 500);
+      }
+    });
+  });
+
+  $$('.plan-template-select').forEach(sel => {
+    sel.addEventListener('change', async (e) => {
+      const date = e.target.dataset.date;
+      const tplId = e.target.value;
+      const s = App.planSundays && App.planSundays.find(x => x.date === date);
+      if (s) {
+        const tpl = await db.templates.get(tplId);
+        if (tpl) {
+          s.templateId = tpl.id;
+          s.templateName = tpl.name;
+          s.items = deepClone(tpl.items || []);
+          await syncPlanSundayToService(s);
+          toast('Applied template "' + tpl.name + '" to ' + fmtShortDate(s.date));
+        }
+      }
+    });
+  });
+}
+
+async function syncPlanSundayToService(s) {
+  s.updatedAt = new Date().toISOString();
+  if (s.items && s.items.length) {
+    s.items.forEach(it => {
+      if (/sermon|message|word|preaching/i.test(it.title) && s.preacher && !it.person) {
+        it.person = s.preacher;
+      }
+      if (/worship|praise|call to worship|invocation/i.test(it.title) && s.liturgist && !it.person) {
+        it.person = s.liturgist;
+      }
+      if (/reading|scripture|bible/i.test(it.title) && s.scripture && !it.description) {
+        it.description = s.scripture;
+      }
+      if (/hymn/i.test(it.title) && s.hymn && !it.description) {
+        it.description = s.hymn;
+      }
+    });
+  }
+  const existing = await db.services.get(s.id);
+  if (existing) {
+    await db.services.put(s);
+  } else {
+    const byDate = await db.services.where('date').equals(s.date).first();
+    if (byDate) {
+      s.id = byDate.id;
+      await db.services.put(s);
+    } else {
+      await db.services.add(s);
+    }
+  }
+  s.isNew = false;
+}
+
+async function autoFillPlanTemplates() {
+  if (!App.planSundays || !App.planSundays.length) return;
+  const templates = await db.templates.toArray();
+  const defaultTpl = templates[0];
+  if (!defaultTpl) return;
+
+  for (const s of App.planSundays) {
+    if (!s.items || !s.items.length) {
+      s.templateId = s.templateId || defaultTpl.id;
+      s.templateName = s.templateName || defaultTpl.name;
+      s.items = deepClone(defaultTpl.items || []);
+    }
+    await syncPlanSundayToService(s);
+  }
+  toast('Applied default liturgy templates to all ' + App.planSundays.length + ' Sundays');
+  showPage('planAhead');
+}
+
+async function saveAllPlanSundays() {
+  if (!App.planSundays || !App.planSundays.length) return;
+  for (const s of App.planSundays) {
+    await syncPlanSundayToService(s);
+  }
+  toast('All ' + App.planSundays.length + ' Sunday services saved to workspace database');
+}
+
+async function saveSinglePlanSunday(date) {
+  const s = App.planSundays && App.planSundays.find(x => x.date === date);
+  if (!s) return;
+  await syncPlanSundayToService(s);
+  toast('Saved service for ' + fmtShortDate(s.date));
+}
+
+async function togglePlanStatus(date) {
+  const s = App.planSundays && App.planSundays.find(x => x.date === date);
+  if (!s) return;
+  s.status = s.status === 'ready' ? 'draft' : 'ready';
+  await syncPlanSundayToService(s);
+  showPage('planAhead');
+}
+
+async function openPlanServiceEditor(date) {
+  let s = App.planSundays && App.planSundays.find(x => x.date === date);
+  if (!s) return;
+  await syncPlanSundayToService(s);
+  App.currentService = deepClone(s);
+  App.currentService.isNew = false;
+  showPage('serviceEditor');
+}
+
+async function downloadPlanSinglePdf(date) {
+  const s = App.planSundays && App.planSundays.find(x => x.date === date);
+  if (!s) { toast('Sunday service not found', 'error'); return; }
+  const church = App.church || {};
+  const theme = getActiveTheme();
+  if (!s.items || !s.items.length) {
+    const tpl = (await db.templates.get(s.templateId)) || (await db.templates.toArray())[0];
+    if (tpl && tpl.items) s.items = deepClone(tpl.items);
+  }
+  try {
+    const doc = await generateServicePdf(s, church, theme);
+    const fileName = pdfFileName(s, church);
+    doc.save(fileName);
+    toast('Exported PDF for ' + fmtShortDate(s.date));
+  } catch (err) {
+    console.error(err);
+    toast('Could not generate PDF for ' + fmtShortDate(s.date), 'error');
+  }
+}
+
+async function downloadPlanSeparatePdfs() {
+  if (!App.planSundays || !App.planSundays.length) {
+    toast('No planned Sundays found', 'info');
+    return;
+  }
+  const church = App.church || {};
+  const theme = getActiveTheme();
+  
+  toast('Downloading ' + App.planSundays.length + ' separate Sunday PDFs...', 'info');
+  
+  for (let i = 0; i < App.planSundays.length; i++) {
+    const s = App.planSundays[i];
+    if (!s.items || !s.items.length) {
+      const tpl = (await db.templates.get(s.templateId)) || (await db.templates.toArray())[0];
+      if (tpl && tpl.items) s.items = deepClone(tpl.items);
+    }
+    try {
+      const doc = await generateServicePdf(s, church, theme);
+      const fileName = pdfFileName(s, church);
+      doc.save(fileName);
+    } catch (e) {
+      console.error(e);
+    }
+    if (i < App.planSundays.length - 1) {
+      await new Promise(r => setTimeout(r, 280));
+    }
+  }
+  toast('All ' + App.planSundays.length + ' separate Sunday PDFs downloaded!');
+}
+
+function drawMasterPlanOverviewPage(doc, planSundays, monthsCount, church, theme) {
+  const P = pdfParams(theme, church);
+  drawPdfChrome(doc, P);
+  
+  let y = 26;
+  const W = 210;
+  const MX = 18;
+  const contentW = W - (MX * 2);
+  
+  doc.setFont(P.hf, 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(P.primaryRgb[0], P.primaryRgb[1], P.primaryRgb[2]);
+  const churchTitle = (church.name || 'ORDER OF SERVICE').toUpperCase();
+  doc.text(churchTitle, W / 2, y, { align: 'center' });
+  y += 6.5;
+  
+  doc.setFont(P.hf, 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(60, 60, 60);
+  const sub = monthsCount + '-MONTH LITURGICAL SCHEDULE & MASTER CALENDAR';
+  doc.text(sub, W / 2, y, { align: 'center' });
+  y += 5.5;
+  
+  doc.setFont(P.bf, 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(110, 110, 110);
+  const startStr = fmtLongDate(planSundays[0].date);
+  const endStr = fmtLongDate(planSundays[planSundays.length - 1].date);
+  doc.text('Covering ' + planSundays.length + ' Sundays  •  ' + startStr + ' – ' + endStr, W / 2, y, { align: 'center' });
+  y += 5.5;
+  
+  doc.setDrawColor(210, 210, 210);
+  doc.setLineWidth(0.3);
+  doc.line(MX, y, W - MX, y);
+  y += 6;
+  
+  doc.setFillColor(245, 247, 250);
+  doc.rect(MX, y, contentW, 6.5, 'F');
+  doc.setFont(P.hf, 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(45, 45, 45);
+  
+  doc.text('DATE', MX + 3, y + 4.5);
+  doc.text('THEME / FOCUS', MX + 28, y + 4.5);
+  doc.text('SCRIPTURE / HYMN', MX + 82, y + 4.5);
+  doc.text('PREACHER', MX + 128, y + 4.5);
+  doc.text('LITURGIST', MX + 155, y + 4.5);
+  y += 7.5;
+  
+  for (let i = 0; i < planSundays.length; i++) {
+    const s = planSundays[i];
+    if (y > 270) {
+      doc.addPage();
+      drawPdfChrome(doc, P);
+      y = 24;
+      doc.setFillColor(245, 247, 250);
+      doc.rect(MX, y, contentW, 6.5, 'F');
+      doc.setFont(P.hf, 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(45, 45, 45);
+      doc.text('DATE', MX + 3, y + 4.5);
+      doc.text('THEME / FOCUS', MX + 28, y + 4.5);
+      doc.text('SCRIPTURE / HYMN', MX + 82, y + 4.5);
+      doc.text('PREACHER', MX + 128, y + 4.5);
+      doc.text('LITURGIST', MX + 155, y + 4.5);
+      y += 7.5;
+    }
+    
+    if (i % 2 === 1) {
+      doc.setFillColor(252, 252, 253);
+      doc.rect(MX, y - 1, contentW, 7, 'F');
+    }
+    
+    doc.setFont(P.bf, 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 30, 30);
+    doc.text(fmtShortDate(s.date), MX + 3, y + 4);
+    
+    doc.setFont(P.bf, 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(40, 40, 40);
+    const themeStr = (s.theme || 'Sunday Service').slice(0, 32);
+    doc.text(themeStr, MX + 28, y + 4);
+    
+    doc.setTextColor(90, 90, 90);
+    const scriptHymn = [s.scripture, s.hymn].filter(Boolean).join(' • ') || '—';
+    doc.text(scriptHymn.slice(0, 26), MX + 82, y + 4);
+    
+    doc.setTextColor(40, 40, 40);
+    doc.text((s.preacher || 'Pastor').slice(0, 16), MX + 128, y + 4);
+    doc.text((s.liturgist || 'Leader').slice(0, 15), MX + 155, y + 4);
+    
+    doc.setDrawColor(240, 240, 240);
+    doc.setLineWidth(0.2);
+    doc.line(MX, y + 6, W - MX, y + 6);
+    
+    y += 7.2;
+  }
+  
+  drawPdfFooter(doc, P, church, 1, 1);
+}
+
+async function downloadPlanCombinedPdf() {
+  if (!App.planSundays || !App.planSundays.length) {
+    toast('No planned Sundays found', 'info');
+    return;
+  }
+  const church = App.church || {};
+  const theme = getActiveTheme();
+  const monthsCount = App.planMonthsCount || 3;
+  
+  toast('Building combined multi-page PDF document...', 'info');
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    
+    drawMasterPlanOverviewPage(doc, App.planSundays, monthsCount, church, theme);
+    
+    for (let i = 0; i < App.planSundays.length; i++) {
+      const s = App.planSundays[i];
+      if (!s.items || !s.items.length) {
+        const tpl = (await db.templates.get(s.templateId)) || (await db.templates.toArray())[0];
+        if (tpl && tpl.items) s.items = deepClone(tpl.items);
+      }
+      doc.addPage();
+      await drawServiceOnPdf(doc, s, church, theme);
+    }
+    
+    const churchName = sanitizeFile(church.name || 'Order-of-Service');
+    const startD = App.planSundays[0].date;
+    const endD = App.planSundays[App.planSundays.length - 1].date;
+    const combinedFileName = churchName + '-' + monthsCount + '-Month-Liturgical-Plan-' + startD + '-to-' + endD + '.pdf';
+    
+    doc.save(combinedFileName);
+    toast('Combined multi-page PDF exported successfully!');
+  } catch (err) {
+    console.error(err);
+    toast('Could not generate combined PDF', 'error');
+  }
 }
 
 
@@ -3326,10 +4030,10 @@ async function renderDashboard() {
   const nextSun = fmtLongDate(isoOf(nextSunday()));
 
   const stats = [
+    { label: 'Plan Ahead', value: '1–4 Months', icon: 'calendar-range', page: 'planAhead', note: 'Long-range liturgy', isText: true },
     { label: 'Saved Sundays', value: servicesCount, icon: 'calendar-days', page: 'sundays', note: 'Planned liturgies' },
     { label: 'Templates', value: templatesCount, icon: 'layout-template', page: 'templates', note: 'Service blueprints' },
     { label: 'PDF Documents', value: historyCount, icon: 'file-text', page: 'history', note: 'Exported prints' },
-    { label: 'Active Theme', value: activeTheme.name || 'Classic Liturgy', icon: 'palette', page: 'themes', note: 'Document style', isText: true },
   ];
 
   return `
@@ -3356,9 +4060,12 @@ async function renderDashboard() {
           </div>
         </div>
       </div>
-      <div class="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+      <div class="flex items-center gap-2.5 shrink-0 self-start sm:self-auto flex-wrap">
         <button class="btn btn-primary text-xs py-2 px-3.5 shadow-sm" data-action="nav" data-page="newService">
           <i data-lucide="calendar-plus" class="w-4 h-4"></i>Plan This Sunday
+        </button>
+        <button class="btn btn-secondary text-xs py-2 px-3.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700" data-action="nav" data-page="planAhead">
+          <i data-lucide="calendar-range" class="w-4 h-4 text-blue-900"></i>Plan Months Ahead
         </button>
         <button class="btn btn-ghost text-xs py-2 px-3 border border-slate-200" data-action="nav" data-page="templates">
           <i data-lucide="layout-template" class="w-4 h-4 text-slate-500"></i>Templates
@@ -3986,6 +4693,7 @@ const VIEWS = {
   login:          { render: renderLogin },
   signup:         { render: renderSignup },
   dashboard:      { render: renderDashboard },
+  planAhead:      { render: renderPlanAhead, after: afterPlanAhead },
   templates:      { render: renderTemplates },
   templateEditor: { render: renderTemplateEditor, after: initTemplateSortable },
   newService:     { render: renderNewService, after: afterNewService },
@@ -3997,7 +4705,7 @@ const VIEWS = {
   account:        { render: renderAccount, after: afterAccount },
 };
 
-const BOTTOM_SHORT = { dashboard: 'Home', templates: 'Templates', newService: 'Plan', history: 'History', settings: 'Settings' };
+const BOTTOM_SHORT = { dashboard: 'Home', planAhead: 'Plan Ahead', templates: 'Templates', newService: 'Plan', sundays: 'Sundays', history: 'History', settings: 'Settings' };
 
 async function showPage(page) {
   const isPublic = ['landing', 'login', 'signup'].includes(page);
@@ -4426,6 +5134,15 @@ function bindGlobalEvents() {
       'nav':                      () => showPage(t.dataset.page),
       'open-menu':                () => openDrawer(),
       'close-menu':               () => closeDrawer(),
+      'set-plan-months':          () => setPlanMonths(parseInt(t.dataset.months, 10)),
+      'download-plan-combined-pdf': () => downloadPlanCombinedPdf(),
+      'download-plan-separate-pdfs': () => downloadPlanSeparatePdfs(),
+      'download-plan-single-pdf': () => downloadPlanSinglePdf(t.dataset.date),
+      'open-plan-editor':         () => openPlanServiceEditor(t.dataset.date),
+      'save-all-plan-sundays':    () => saveAllPlanSundays(),
+      'save-single-plan-sunday':  () => saveSinglePlanSunday(t.dataset.date),
+      'auto-fill-plan-template':  () => autoFillPlanTemplates(),
+      'toggle-plan-status':       () => togglePlanStatus(t.dataset.date),
       'open-template-editor':     () => openTemplateEditor(id || null),
       'use-template':             () => { App.preselectTemplateId = id; showPage('newService'); },
       'duplicate-template':       () => duplicateTemplate(id),
